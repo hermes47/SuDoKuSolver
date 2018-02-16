@@ -44,16 +44,22 @@ class SudokuGrid {
   std::array<std::bitset<T>, N> _cols;
   std::array<std::bitset<T>, N> _blks;
   
+protected:
+  void GetCellGroups(unsigned char i, size_t &row, size_t &col, size_t &blk) {
+    row = i / N;
+    col = i % N;
+    size_t bigrow = i / (N * H);
+    size_t bigcol = col / W;
+    blk = bigrow * H + bigcol;
+  }
+  
 public:
   SudokuGrid() {
     for (unsigned char i = 0; i < T; ++i) _cells[i] = Cell();
     for (unsigned char i = 0; i < T; ++i) {
-      size_t r = i / N;
-      size_t c = i % N;
-      size_t br = i / (N * H);
-      size_t bc = c / W;
-      size_t b = br * H + bc;
-      
+      size_t r, c, b;
+      GetCellGroups(i, r, c, b);
+      std::cout << (int)i << " " << r << " " << c << " " << b << std::endl;
       _rows[r].set(i);
       _cols[c].set(i);
       _blks[b].set(i);
@@ -96,9 +102,6 @@ public:
   }
 #undef T
 #undef N
-  
-
-  
 };
 
 #endif /* SUDOKUSOLVER_GRID_TEMPLATE_HPP */
