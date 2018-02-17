@@ -55,6 +55,26 @@ protected:
     blk = bigrow * H + bigcol;
   }
   
+private:
+  void PrintSeperatorGridLine() const {
+    for (size_t i = 0; i < N; ++i) {
+      if (!(i % W)) std::cout << "+-";
+      std::cout << "--";
+    }
+    std::cout << "+" << std::endl;
+  }
+  void PrintRowGridLine(const std::bitset<T> &row) const {
+    size_t col = 0;
+    for (size_t i = 0; i < row.size(); ++i) {
+      if (!row[i]) continue;
+      if (!(col % W)) std::cout << "| ";
+      if (_cells[i].GetValue()) std::cout << (int)_cells[i].GetValue() << " ";
+      else std::cout << "  ";
+      ++col;
+    }
+    std::cout << "|" << std::endl;
+  }
+  
 public:
   SudokuGrid() {
     for (unsigned char i = 0; i < T; ++i) _cells[i] = Cell();
@@ -118,38 +138,11 @@ public:
   }
   
   void DisplayGrid() const {
-    std::cout << "Rows:" << std::endl;
-    for (unsigned char i = 0; i < N; ++i) {
-      std::cout << (int)i << " : ";
-      for (size_t j = 0; j < T; ++j) {
-        if (_rows[i][j]) std::cout << j << " ";
-      }
-      std::cout << std::endl;
+    for (size_t row = 0; row < _rows.size(); ++row) {
+      if (!(row % H)) PrintSeperatorGridLine();
+      PrintRowGridLine(_rows[row]);
     }
-    std::cout << "\nColumns:" << std::endl;
-    for (unsigned char i = 0; i < N; ++i) {
-      std::cout << (int)i << " : ";
-      for (size_t j = 0; j < T; ++j) {
-        if (_cols[i][j]) std::cout << j << " ";
-      }
-      std::cout << std::endl;
-    }
-    std::cout << "\nBlocks:" << std::endl;
-    for (unsigned char i = 0; i < N; ++i) {
-      std::cout << (int)i << " : ";
-      for (size_t j = 0; j < T; ++j) {
-        if (_blks[i][j]) std::cout << j << " ";
-      }
-      std::cout << std::endl;
-    }
-    std::cout << "\nCells:" << std::endl;
-    for (unsigned char i = 0; i < T; ++i) {
-      std::cout << (int)(i) << " : " << (int)_cells[i].GetValue() << " : ";
-      for (size_t j = 0; j < N; ++j) {
-        if (_cells[i].IsOption(j)) std::cout << j + 1 << " ";
-      }
-      std::cout << std::endl;
-    }
+    PrintSeperatorGridLine();
   }
 #undef T
 #undef N
