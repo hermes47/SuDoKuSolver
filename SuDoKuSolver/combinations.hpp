@@ -19,9 +19,10 @@ class Combinations {
   iterator_t _begin, _end;
   std::vector<bool> _use;
   uint64_t _r;
+  bool _is_done;
   
 public:
-  Combinations(iterator_t begin, iterator_t end, uint64_t r) : _begin(begin), _end(end) , _r(r)
+  Combinations(iterator_t begin, iterator_t end, uint64_t r) : _begin(begin), _end(end) , _r(r), _is_done(false)
   {
     _use.resize(std::distance(_begin, _end), false);
     if (_use.size() >= _r) std::fill(_use.end() - _r, _use.end(), true);
@@ -35,7 +36,28 @@ public:
     for (uint64_t i = 0; i < _use.size(); ++i,++c) {
       if (_use[i]) *result++ = *c;
     }
-    return std::next_permutation(_use.begin(), _use.end());
+    if (!_is_done && !std::next_permutation(_use.begin(), _use.end())) {
+      _is_done = true;
+      return true;
+    } else if (!_is_done) return true;
+    else return false;
+  }
+  
+  template<class output_it>
+  bool operator()(output_it result, output_it negative_result)
+  {
+    if (_use.size() < _r) return false;
+    
+    iterator_t c = _begin;
+    for (uint64_t i = 0; i < _use.size(); ++i,++c) {
+      if (_use[i]) *result++ = *c;
+      else *negative_result++ = *c;
+    }
+    if (!_is_done && !std::next_permutation(_use.begin(), _use.end())) {
+      _is_done = true;
+      return true;
+    } else if (!_is_done) return true;
+    else return false;
   }
 };
 
