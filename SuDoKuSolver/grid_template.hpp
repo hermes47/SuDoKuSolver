@@ -98,6 +98,29 @@ public:
     
   }
   
+  bool IsValidState() {
+    // Check all unvalued cells have possible locations
+    for (Cell& c : _cells) {
+      if (!c.GetValue() && !c.NumOptions()) return false;
+    }
+    // Check all groups have maximum of one of each value
+    std::array<std::bitset<N>, ((grid_work_t)N) * 3> all_groups;
+    for (cell_value_t i = 0; i < _cells.size(); ++i) {
+      cell_value_t v = _cells[i].GetValue();
+      if (!v) continue;
+      v -= 1;
+      cell_value_t row, col, blk;
+      GetCellGroups(i, row, col, blk);
+      if (all_groups[row][v]) return false;
+      else all_groups[row].set(v);
+      if (all_groups[col + N][v]) return false;
+      else all_groups[col + N].set(v);
+      if (all_groups[blk + N + N][v]) return false;
+      else all_groups[blk + N + N].set(v);
+    }
+    return true;
+  }
+  
   void SolveGrid() {
     // First go through setting all only values.
     bool changed = true;
