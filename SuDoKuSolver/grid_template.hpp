@@ -55,26 +55,6 @@ protected:
     blk = bigrow * H + bigcol;
   }
   
-private:
-  void PrintSeperatorGridLine() const {
-    for (size_t i = 0; i < N; ++i) {
-      if (!(i % W)) std::cout << "+-";
-      std::cout << "--";
-    }
-    std::cout << "+" << std::endl;
-  }
-  void PrintRowGridLine(const std::bitset<T> &row) const {
-    size_t col = 0;
-    for (size_t i = 0; i < row.size(); ++i) {
-      if (!row[i]) continue;
-      if (!(col % W)) std::cout << "| ";
-      if (_cells[i].GetValue()) std::cout << (int)_cells[i].GetValue() << " ";
-      else std::cout << "  ";
-      ++col;
-    }
-    std::cout << "|" << std::endl;
-  }
-  
 public:
   SudokuGrid() {
     for (unsigned char i = 0; i < T; ++i) _cells[i] = Cell();
@@ -144,8 +124,28 @@ public:
     }
     PrintSeperatorGridLine();
   }
-#undef T
-#undef N
+  
+  
+private:
+  void PrintSeperatorGridLine() const {
+    for (size_t i = 0; i < N; ++i) {
+      if (!(i % W)) std::cout << "+-";
+      std::cout << "--";
+    }
+    std::cout << "+" << std::endl;
+  }
+  void PrintRowGridLine(const std::bitset<T> &row) const {
+    size_t col = 0;
+    for (size_t i = 0; i < row.size(); ++i) {
+      if (!row[i]) continue;
+      if (!(col % W)) std::cout << "| ";
+      if (_cells[i].GetValue()) std::cout << (int)_cells[i].GetValue() << " ";
+      else std::cout << "  ";
+      ++col;
+    }
+    std::cout << "|" << std::endl;
+  }
+
 };
 
 #endif /* SUDOKUSOLVER_GRID_TEMPLATE_HPP */
