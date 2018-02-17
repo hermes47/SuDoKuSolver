@@ -81,7 +81,7 @@ private:
   GridState _solved;
   bool _solveable;
   
-protected:
+public:
   void GetCellGroups(values_t i, values_t &row, values_t &col, values_t &blk) const {
     row = i / num_vals;
     col = i % num_vals;
