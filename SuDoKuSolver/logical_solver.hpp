@@ -94,93 +94,49 @@ template <dimension_t Height, dimension_t Width>
 bool FindHiddenSingles(SudokuGrid<Height,Width>& grid, Actions *actions) {
   static const values_t num_vals = Height * Width;
   static const work_t num_cells = num_vals * num_vals;
-  static std::array<std::vector<values_t>, num_vals> row_idxs, col_idxs, blk_idxs;
+  static std::array<std::vector<values_t>, 3 * num_vals> grp_idxs;
   static bool init_idxs = false;
   
   if (!init_idxs) {
     for (work_t cell_idx = 0; cell_idx < num_cells; ++cell_idx) {
       SudokuCell<num_vals> &cell = grid.GetCell(cell_idx);
-      row_idxs[cell.GetRow()].push_back(cell_idx);
-      col_idxs[cell.GetColumn()].push_back(cell_idx);
-      blk_idxs[cell.GetBlock()].push_back(cell_idx);
+      grp_idxs[cell.GetRow()].push_back(cell_idx);
+      grp_idxs[cell.GetColumn() + num_vals].push_back(cell_idx);
+      grp_idxs[cell.GetBlock() + 2 * num_vals].push_back(cell_idx);
     }
     init_idxs = true;
   }
   
   // map cell to (val,bitwise (row,col,blk))
-  std::map<work_t, std::pair<values_t, std::bitset<3>>> reasons;
+  std::map<work_t, std::pair<values_t, uint8_t>> reasons;
   bool added = false;
-  std::array<SudokuCell<num_vals>, num_vals> all_cells;
-  static std::bitset<3> row_k(1);
-  static std::bitset<3> col_k(2);
-  static std::bitset<3> blk_k(4);
   
-  // Check rows
-  for (std::vector<values_t>& row : row_idxs) {
-    for (values_t i = 0; i < row.size(); ++i) {
-      SudokuCell<num_vals> &cell = grid.GetCell(row[i]);
+  // Check groups
+  for (values_t i = 0; i < grp_idxs.size(); ++i) {
+    std::vector<values_t>& grp = grp_idxs[i];
+    for (values_t j = 0; j < grp.size(); ++j) {
+      SudokuCell<num_vals> &cell = grid.GetCell(grp[j]);
       std::bitset<num_vals> options;
       cell.GetPossibleOptions(options);
-      for (values_t j = 0; j < row.size(); ++j) {
-        if (i == j) continue;
+      for (values_t k = 0; k < grp.size(); ++k) {
+        if (j == k) continue;
         std::bitset<num_vals> tmp;
-        grid.GetCell(row[j]).GetPossibleOptions(tmp);
+        grid.GetCell(grp[k]).GetPossibleOptions(tmp);
         options &= (~tmp);
       }
       if (options.count() == 1) {
-        values_t val = DetermineValue<num_vals>(options);
-        auto v = std::make_pair(val, std::bitset<3>(row_k));
-        reasons.emplace(row[i], v);
-        DetermineAffectedCells(row[i], val, grid, actions);
-      }
-    }
-  }
-  
-  // Check columns
-  for (std::vector<values_t>& col : col_idxs) {
-    for (values_t i = 0; i < col.size(); ++i) {
-      SudokuCell<num_vals> &cell = grid.GetCell(col[i]);
-      std::bitset<num_vals> options;
-      cell.GetPossibleOptions(options);
-      for (values_t j = 0; j < col.size(); ++j) {
-        if (i == j) continue;
-        std::bitset<num_vals> tmp;
-        grid.GetCell(col[j]).GetPossibleOptions(tmp);
-        options &= (~tmp);
-      }
-      if (options.count() == 1) {;
-        if (reasons.find(col[i]) != reasons.end()) {
-          reasons.at(col[i]).second |= col_k;
+        if (reasons.find(grp[j]) != reasons.end()) {
+          if (i >= 2 * num_vals) reasons.at(grp[j]).second |= 4;
+          else if (i >= num_vals) reasons.at(grp[j]).second |= 2;
+          else reasons.at(grp[j]).second |= 1;
         } else {
           values_t val = DetermineValue<num_vals>(options);
-          auto v = std::make_pair(val, std::bitset<3>(col_k));
-          reasons.emplace(col[i], v);
-          DetermineAffectedCells(col[i], val, grid, actions);
-        }
-      }
-    }
-  }
-  
-  // Check blocks
-  for (std::vector<values_t>& blk : blk_idxs) {
-    for (values_t i = 0; i < blk.size(); ++i) {
-      SudokuCell<num_vals> &cell = grid.GetCell(blk[i]);
-      std::bitset<num_vals> options;
-      cell.GetPossibleOptions(options);
-      for (values_t j = 0; j < blk.size(); ++j) {
-        if (i == j) continue;
-        std::bitset<num_vals> tmp;
-        grid.GetCell(blk[j]).GetPossibleOptions(tmp);
-        options &= (~tmp);
-      }
-      if (options.count() == 1) {
-        if (reasons.find(blk[i]) != reasons.end()) {
-          reasons.at(blk[i]).second |= blk_k;
-        } else {
-          values_t val = DetermineValue<num_vals>(options);
-          auto v = std::make_pair(val, std::bitset<3>(blk_k));
-          reasons.emplace(blk[i], v);
-          DetermineAffectedCells(blk[i], val, grid, actions);
+          std::pair<values_t, uint8_t> v;
+          if (i >= 2 * num_vals) v = std::make_pair(val, 4);
+          else if (i >= num_vals) v = std::make_pair(val, 2);
+          else v = std::make_pair(val, 1);
+          reasons.emplace(grp[j], v);
+          DetermineAffectedCells(grp[j], val, grid, actions);
         }
       }
     }
@@ -192,19 +148,19 @@ bool FindHiddenSingles(SudokuGrid<Height,Width>& grid, Actions *actions) {
     actions->emplace_back(SET_VALUE, kv->second.first, kv->first, current_group);
     values_t row, col, blk;
     grid.GetCellGroups(kv->first, row, col, blk);
-    std::cout << "[UNIQUE] r" << row << "c" << col << " must be " << kv->second.first << " as it is the"
-    << " only such instance in its";
+    std::cout << "[UNIQUE] r" << row << "c" << col << " must be " << kv->second.first
+    << " as it is the only such instance in its";
     bool addand = false;
-    if (kv->second.second[0]) {
+    if (kv->second.second & 1) {
       addand = true;
       std::cout << " Row";
     }
-    if (kv->second.second[1]) {
+    if (kv->second.second & 2) {
       if (addand) std::cout << " and";
       addand = true;
       std::cout << " Column";
     }
-    if (kv->second.second[2]) {
+    if (kv->second.second & 4) {
       if (addand) std::cout << " and";
       std::cout << " Block";
     }
