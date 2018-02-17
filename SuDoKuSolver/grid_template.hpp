@@ -12,6 +12,7 @@
 #include <array>
 #include <bitset>
 #include <iostream>
+#include <string>
 
 template <unsigned char N>
 class SudokuCell {
@@ -30,8 +31,9 @@ public:
   inline void ToggleOption(unsigned char p) { _possibleValues.flip(p - 1); }
   inline void SetOption(unsigned char p) { _possibleValues.set(p - 1); }
   inline void ResetOption(unsigned char p) { _possibleValues.reset(p - 1); }
-  inline std::bitset<N> GetPossibleOptions() const { return _possibleValues; }
+  inline void GetPossibleOptions(std::bitset<N> &o) const { o = _possibleValues; }
   inline bool IsOption(size_t i) const { return _possibleValues[i]; }
+  inline size_t NumOptions() const { return _possibleValues.count(); }
 };
 
 template <unsigned char H, unsigned char W = H>
@@ -59,11 +61,60 @@ public:
     for (unsigned char i = 0; i < T; ++i) {
       size_t r, c, b;
       GetCellGroups(i, r, c, b);
-      std::cout << (int)i << " " << r << " " << c << " " << b << std::endl;
       _rows[r].set(i);
       _cols[c].set(i);
       _blks[b].set(i);
     }
+  }
+  
+  SudokuGrid(const std::string s) : SudokuGrid() {
+    if (s.size() != T) {
+      std::cerr << "Provided grid string is wrong size. (Expected " << T
+      << ", got " << s.size() << ")." << std::endl;
+      return;
+    }
+    
+    for (size_t i = 0; i < _cells.size(); ++i){
+      unsigned char v = s[i] - 48;
+      if (!v) continue;
+      size_t r, c, b;
+      GetCellGroups(i, r, c, b);
+      _cells[i] = Cell(v);
+      std::bitset<T> affected = _rows[r] | _cols[c] | _blks[b];
+      for (size_t j = 0; j < _cells.size(); ++j) {
+        if (affected[j]) _cells[j].ResetOption(v);
+      }
+    }
+    
+  }
+  
+  void SolveGrid() {
+    // First go through setting all only values.
+    bool changed = true;
+    while (changed) {
+      changed = false;
+      for (size_t i = 0; i < _cells.size(); ++i) {
+        Cell &cell = _cells[i];
+        if (cell.NumOptions() == 1) {
+          std::bitset<N> bits;
+          cell.GetPossibleOptions(bits);
+          unsigned char v = 0;
+          while (bits.any()) {
+            ++v;
+            bits >>= 1;
+          }
+          cell.SetValue(v);
+          size_t r, c, b;
+          GetCellGroups(i, r, c, b);
+          std::bitset<T> affected = _rows[r] | _cols[c] | _blks[b];
+          for (size_t j = 0; j < _cells.size(); ++j) {
+            if (affected[j]) _cells[j].ResetOption(v);
+          }
+          changed = true;
+        }
+      }
+    }
+    
   }
   
   void DisplayGrid() const {
@@ -93,7 +144,7 @@ public:
     }
     std::cout << "\nCells:" << std::endl;
     for (unsigned char i = 0; i < T; ++i) {
-      std::cout << (int)(i) << " : " ;
+      std::cout << (int)(i) << " : " << (int)_cells[i].GetValue() << " : ";
       for (size_t j = 0; j < N; ++j) {
         if (_cells[i].IsOption(j)) std::cout << j + 1 << " ";
       }
