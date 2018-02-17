@@ -9,6 +9,7 @@
 #ifndef SUDOKUSOLVER_GRID_TEMPLATE_HPP
 #define SUDOKUSOLVER_GRID_TEMPLATE_HPP
 
+#include <algorithm>
 #include <array>
 #include <bitset>
 #include <cstdint>
@@ -23,18 +24,17 @@ typedef uint32_t grid_work_t;  // Type used for internal grid working
 
 template <cell_value_t N>
 class SudokuCell {
+  static const cell_value_t _mask = cell_value_t(1) << (std::numeric_limits<cell_value_t>::digits - 1);
   std::bitset<N> _possibleValues;
-  cell_value_t _value;       // logical OR with 128 to set if is a clue
+  cell_value_t _value;       // logical OR with _mask to set if is a clue
+  cell_value_t _row, _col, _blk;
+  
   
 public:
   SudokuCell() : _value(0) { _possibleValues.set(); }
-  SudokuCell(cell_value_t v) : _value(v) {
-    static cell_value_t mask = cell_value_t(1) << (std::numeric_limits<cell_value_t>::digits - 1);
-    if (_value) _value |= mask;
-  }
-  inline cell_value_t GetValue() const { return _value & 127; }
-  inline void SetValue(cell_value_t v) { _value = v; }
-  inline void SetFixedValue(cell_value_t v) { _value = v | 128; }
+  inline cell_value_t GetValue() const { return _value & (_mask - 1); }
+  inline void SetValue(cell_value_t v) { _value = v; _possibleValues.reset(); }
+  inline void SetFixedValue(cell_value_t v) { _value = v | _mask; _possibleValues.reset(); }
   inline bool IsFixed() const { return _value & 128; }
   inline void ToggleOption(cell_value_t p) { _possibleValues.flip(p - 1); }
   inline void SetOption(cell_value_t p) { _possibleValues.set(p - 1); }
@@ -42,6 +42,13 @@ public:
   inline void GetPossibleOptions(std::bitset<N> &o) const { o = _possibleValues; }
   inline bool IsOption(cell_value_t i) const { return _possibleValues[i]; }
   inline cell_value_t NumOptions() const { return (cell_value_t)_possibleValues.count(); }
+  inline void Reset() { _value = 0; _possibleValues.set(); }
+  inline cell_value_t GetRow() const { return _row; }
+  inline cell_value_t GetColumn() const { return _col; }
+  inline cell_value_t GetBlock() const { return _blk; }
+  inline void SetRow(cell_value_t r) { _row = r; }
+  inline void SetColumn(cell_value_t r) { _col = r; }
+  inline void SetBlock(cell_value_t r) { _blk = r; }
 };
 
 template <grid_size_t H, grid_size_t W = H>
@@ -50,14 +57,18 @@ class SudokuGrid {
   static const grid_work_t T = N * N;
   typedef SudokuCell<N> Cell;
   typedef std::array<Cell*, N> Group;
+  typedef std::array<cell_value_t, T> GridState;
   
   std::array<Cell, T> _cells;
   std::array<std::bitset<T>, N> _rows;
   std::array<std::bitset<T>, N> _cols;
   std::array<std::bitset<T>, N> _blks;
   
+  GridState _initial;
+  GridState _solved;
+  
 protected:
-  void GetCellGroups(cell_value_t i, cell_value_t &row, cell_value_t &col, cell_value_t &blk) {
+  void GetCellGroups(cell_value_t i, cell_value_t &row, cell_value_t &col, cell_value_t &blk) const {
     row = i / N;
     col = i % N;
     cell_value_t bigrow = i / (N * H);
@@ -65,10 +76,31 @@ protected:
     blk = bigrow * H + bigcol;
   }
   
+  void SetState(const GridState& state) {
+    for (Cell& cell : _cells) cell.Reset();
+    for (cell_value_t i = 0; i < _cells.size(); ++i) {
+      if (!state[i]) continue;
+      cell_value_t v = state[i];
+      if (_initial[i]) _cells[i].SetFixedValue(v);
+      else _cells[i].SetValue(v);
+      cell_value_t r, c, b;
+      GetCellGroups(i, r, c, b);
+      std::bitset<T> affected = _rows[r] | _cols[c] | _blks[b];
+      for (cell_value_t j = 0; j < _cells.size(); ++j) {
+        if (affected[j]) _cells[j].ResetOption(v);
+      }
+    }
+  }
+  
+  void GetState(GridState& state) const {
+    for (cell_value_t i = 0; i < _cells.size(); ++i) {
+      state[i] = _cells[i].GetValue();
+    }
+  }
+  
 public:
   SudokuGrid() {
     for (cell_value_t i = 0; i < _cells.size(); ++i) {
-       _cells[i] = Cell();
       cell_value_t r, c, b;
       GetCellGroups(i, r, c, b);
       _rows[r].set(i);
@@ -87,20 +119,14 @@ public:
     for (cell_value_t i = 0; i < _cells.size(); ++i){
       cell_value_t v = s[i] - 48;
       if (!v) continue;
-      cell_value_t r, c, b;
-      GetCellGroups(i, r, c, b);
-      _cells[i] = Cell(v);
-      std::bitset<T> affected = _rows[r] | _cols[c] | _blks[b];
-      for (cell_value_t j = 0; j < _cells.size(); ++j) {
-        if (affected[j]) _cells[j].ResetOption(v);
-      }
+      _initial[i] = v;
     }
-    
+    SetState(_initial);
   }
   
-  bool IsValidState() {
+  bool IsValidState() const {
     // Check all unvalued cells have possible locations
-    for (Cell& c : _cells) {
+    for (const Cell& c : _cells) {
       if (!c.GetValue() && !c.NumOptions()) return false;
     }
     // Check all groups have maximum of one of each value
@@ -121,33 +147,70 @@ public:
     return true;
   }
   
+  bool IsSolved() {
+    for (Cell& c : _cells) {
+      if (!c.GetValue()) return false;
+    }
+    return true;
+  }
+  
   void SolveGrid() {
-    // First go through setting all only values.
-    bool changed = true;
-    while (changed) {
-      changed = false;
-      for (cell_value_t i = 0; i < _cells.size(); ++i) {
-        Cell &cell = _cells[i];
-        if (cell.NumOptions() == 1) {
-          std::bitset<N> bits;
-          cell.GetPossibleOptions(bits);
-          cell_value_t v = 0;
-          while (bits.any()) {
-            ++v;
-            bits >>= 1;
-          }
-          cell.SetValue(v);
-          cell_value_t r, c, b;
-          GetCellGroups(i, r, c, b);
-          std::bitset<T> affected = _rows[r] | _cols[c] | _blks[b];
-          for (size_t j = 0; j < _cells.size(); ++j) {
-            if (affected[j]) _cells[j].ResetOption(v);
-          }
-          changed = true;
-        }
+    GridState current;
+    GetState(current);
+    
+    std::vector<GridState*> to_run;
+    to_run.push_back(&current);
+    size_t count = 0;
+    bool solved = false;
+    while (to_run.size()) {
+      GridState state = *to_run.back();
+      to_run.pop_back();
+      SetState(state);
+      ++count;
+      
+      // Check validity and if solved
+      if (!IsValidState()) continue;
+      if (IsSolved() && solved) {
+        std::cerr << "Grid has multiple solutions." << std::endl;
+        solved = false;
+        break;
+      } else if (IsSolved()) {
+        _solved = state;
+        solved = true;
+        continue;
       }
+      
+      // Find smallest optioned cell
+      cell_value_t smallCell = T;
+      for (cell_value_t cell = 0; cell < _cells.size(); ++cell) {
+        if (_cells[cell].GetValue()) continue;
+        if (smallCell == T) smallCell = cell;
+        if (_cells[cell].NumOptions() == 1) {  // Never gonna get smaller options
+          smallCell = cell;
+          break;
+        } else if (_cells[cell].NumOptions() < _cells[smallCell].NumOptions()) smallCell = cell;
+      }
+      
+      // Branch on all the options
+      std::bitset<N> options;
+      _cells[smallCell].GetPossibleOptions(options);
+      for (cell_value_t i = 0; i < options.size(); ++i) {
+        if (!options[i]) continue;
+        GridState *newState = new GridState();
+        std::copy(state.begin(), state.end(), newState->begin());
+        newState->at(smallCell) = i + 1;
+        to_run.push_back(newState);
+      }
+      
     }
     
+    if (!solved) std::cout << "No valid solution found (" << count << " iterations)." << std::endl;
+    else {
+      SetState(_solved);
+      std::cout << "Solution found (" << count << " iterations) : " << std::endl;
+      DisplayGrid();
+    }
+    SetState(current);
   }
   
   void DisplayGrid() const {
@@ -156,6 +219,12 @@ public:
       PrintRowGridLine(_rows[row]);
     }
     PrintSeperatorGridLine();
+  }
+  
+  void DisplayState(const GridState& state) const {
+    for (cell_value_t v : state) std::cout << v;
+    if (IsValidState()) std::cout << " VALID!" << std::endl;
+    else std::cout << " NOT VALID!" << std::endl;
   }
   
   
