@@ -61,7 +61,7 @@ bool LogicallySolveGrid(SudokuGrid<Height,Width>&);
 template <dimension_t Height, dimension_t Width>
 class SudokuGrid {
   friend bool SolveGrid<Height,Width>(SudokuGrid<Height,Width>&, bool);
-  friend bool LogicallySolveGrid<Height,Width>(SudokuGrid<Height,Width>&);
+//  friend bool LogicallySolveGrid<Height,Width>(SudokuGrid<Height,Width>&);
   
   static const values_t num_vals = Height * Width;
   static const work_t num_cells = num_vals * num_vals;
@@ -172,6 +172,19 @@ public:
     }
   }
   
+  void SetSolvedState(const GridState& state) {
+    
+  }
+  
+  void GetSolvedState(GridState& state) const {
+    
+  }
+  
+  inline Cell& GetCell(work_t idx) { return _cells[idx]; }
+  inline std::bitset<num_cells>& GetRow(values_t idx) { return _rows[idx]; }
+  inline std::bitset<num_cells>& GetColumn(values_t idx) { return _cols[idx]; }
+  inline std::bitset<num_cells>& GetBlock(values_t idx) { return _blks[idx]; }
+  
   void DisplayGrid() const {
     for (values_t row = 0; row < _rows.size(); ++row) {
       if (!(row % Height)) PrintSeperatorGridLine();
@@ -187,6 +200,7 @@ public:
       if (v) std::cout << v;
       else std::cout << '.';
     }
+    std::cout << std::endl;
   }
   
 private:
