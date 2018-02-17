@@ -11,55 +11,65 @@
 
 #include <array>
 #include <bitset>
+#include <cstdint>
 #include <iostream>
+#include <limits>
 #include <string>
+#include <vector>
 
-template <unsigned char N>
+typedef uint8_t grid_size_t;  // Type used to define grid size
+typedef uint16_t cell_value_t; // Type used to define possible values
+typedef uint32_t grid_work_t;  // Type used for internal grid working
+
+template <cell_value_t N>
 class SudokuCell {
   std::bitset<N> _possibleValues;
-  unsigned char _value;       // logical OR with 128 to set if is a clue
+  cell_value_t _value;       // logical OR with 128 to set if is a clue
   
 public:
   SudokuCell() : _value(0) { _possibleValues.set(); }
-  SudokuCell(unsigned char v) : _value(v) {
-    if (_value) _value |= 128;
+  SudokuCell(cell_value_t v) : _value(v) {
+    static cell_value_t mask = cell_value_t(1) << (std::numeric_limits<cell_value_t>::digits - 1);
+    if (_value) _value |= mask;
   }
-  inline unsigned char GetValue() const { return _value & 127; }
-  inline void SetValue(unsigned char v) { _value = v; }
-  inline void SetFixedValue(unsigned char v) { _value = v | 128; }
+  inline cell_value_t GetValue() const { return _value & 127; }
+  inline void SetValue(cell_value_t v) { _value = v; }
+  inline void SetFixedValue(cell_value_t v) { _value = v | 128; }
   inline bool IsFixed() const { return _value & 128; }
-  inline void ToggleOption(unsigned char p) { _possibleValues.flip(p - 1); }
-  inline void SetOption(unsigned char p) { _possibleValues.set(p - 1); }
-  inline void ResetOption(unsigned char p) { _possibleValues.reset(p - 1); }
+  inline void ToggleOption(cell_value_t p) { _possibleValues.flip(p - 1); }
+  inline void SetOption(cell_value_t p) { _possibleValues.set(p - 1); }
+  inline void ResetOption(cell_value_t p) { _possibleValues.reset(p - 1); }
   inline void GetPossibleOptions(std::bitset<N> &o) const { o = _possibleValues; }
-  inline bool IsOption(size_t i) const { return _possibleValues[i]; }
-  inline size_t NumOptions() const { return _possibleValues.count(); }
+  inline bool IsOption(cell_value_t i) const { return _possibleValues[i]; }
+  inline cell_value_t NumOptions() const { return (cell_value_t)_possibleValues.count(); }
 };
 
-template <unsigned char H, unsigned char W = H>
+template <grid_size_t H, grid_size_t W = H>
 class SudokuGrid {
-  static const unsigned int N = H * W;
-  static const unsigned int T = N * N;
+  static const cell_value_t N = H * W;
+  static const grid_work_t T = N * N;
   typedef SudokuCell<N> Cell;
+  typedef std::array<Cell*, N> Group;
+  
   std::array<Cell, T> _cells;
   std::array<std::bitset<T>, N> _rows;
   std::array<std::bitset<T>, N> _cols;
   std::array<std::bitset<T>, N> _blks;
   
 protected:
-  void GetCellGroups(unsigned char i, size_t &row, size_t &col, size_t &blk) {
+  void GetCellGroups(cell_value_t i, cell_value_t &row, cell_value_t &col, cell_value_t &blk) {
     row = i / N;
     col = i % N;
-    size_t bigrow = i / (N * H);
-    size_t bigcol = col / W;
+    cell_value_t bigrow = i / (N * H);
+    cell_value_t bigcol = col / W;
     blk = bigrow * H + bigcol;
   }
   
 public:
   SudokuGrid() {
-    for (unsigned char i = 0; i < T; ++i) _cells[i] = Cell();
-    for (unsigned char i = 0; i < T; ++i) {
-      size_t r, c, b;
+    for (cell_value_t i = 0; i < _cells.size(); ++i) {
+       _cells[i] = Cell();
+      cell_value_t r, c, b;
       GetCellGroups(i, r, c, b);
       _rows[r].set(i);
       _cols[c].set(i);
@@ -68,20 +78,20 @@ public:
   }
   
   SudokuGrid(const std::string s) : SudokuGrid() {
-    if (s.size() != T) {
-      std::cerr << "Provided grid string is wrong size. (Expected " << T
+    if (s.size() != _cells.size()) {
+      std::cerr << "Provided grid string is wrong size. (Expected " << _cells.size()
       << ", got " << s.size() << ")." << std::endl;
       return;
     }
     
-    for (size_t i = 0; i < _cells.size(); ++i){
-      unsigned char v = s[i] - 48;
+    for (cell_value_t i = 0; i < _cells.size(); ++i){
+      cell_value_t v = s[i] - 48;
       if (!v) continue;
-      size_t r, c, b;
+      cell_value_t r, c, b;
       GetCellGroups(i, r, c, b);
       _cells[i] = Cell(v);
       std::bitset<T> affected = _rows[r] | _cols[c] | _blks[b];
-      for (size_t j = 0; j < _cells.size(); ++j) {
+      for (cell_value_t j = 0; j < _cells.size(); ++j) {
         if (affected[j]) _cells[j].ResetOption(v);
       }
     }
@@ -93,18 +103,18 @@ public:
     bool changed = true;
     while (changed) {
       changed = false;
-      for (size_t i = 0; i < _cells.size(); ++i) {
+      for (cell_value_t i = 0; i < _cells.size(); ++i) {
         Cell &cell = _cells[i];
         if (cell.NumOptions() == 1) {
           std::bitset<N> bits;
           cell.GetPossibleOptions(bits);
-          unsigned char v = 0;
+          cell_value_t v = 0;
           while (bits.any()) {
             ++v;
             bits >>= 1;
           }
           cell.SetValue(v);
-          size_t r, c, b;
+          cell_value_t r, c, b;
           GetCellGroups(i, r, c, b);
           std::bitset<T> affected = _rows[r] | _cols[c] | _blks[b];
           for (size_t j = 0; j < _cells.size(); ++j) {
@@ -118,7 +128,7 @@ public:
   }
   
   void DisplayGrid() const {
-    for (size_t row = 0; row < _rows.size(); ++row) {
+    for (cell_value_t row = 0; row < _rows.size(); ++row) {
       if (!(row % H)) PrintSeperatorGridLine();
       PrintRowGridLine(_rows[row]);
     }
@@ -128,15 +138,15 @@ public:
   
 private:
   void PrintSeperatorGridLine() const {
-    for (size_t i = 0; i < N; ++i) {
+    for (cell_value_t i = 0; i < N; ++i) {
       if (!(i % W)) std::cout << "+-";
       std::cout << "--";
     }
     std::cout << "+" << std::endl;
   }
   void PrintRowGridLine(const std::bitset<T> &row) const {
-    size_t col = 0;
-    for (size_t i = 0; i < row.size(); ++i) {
+    cell_value_t col = 0;
+    for (cell_value_t i = 0; i < row.size(); ++i) {
       if (!row[i]) continue;
       if (!(col % W)) std::cout << "| ";
       if (_cells[i].GetValue()) std::cout << (int)_cells[i].GetValue() << " ";
