@@ -29,7 +29,6 @@ class SudokuCell {
   cell_value_t _value;       // logical OR with _mask to set if is a clue
   cell_value_t _row, _col, _blk;
   
-  
 public:
   SudokuCell() : _value(0) { _possibleValues.set(); }
   inline cell_value_t GetValue() const { return _value & (_mask - 1); }
@@ -83,8 +82,7 @@ protected:
       cell_value_t v = state[i];
       if (_initial[i]) _cells[i].SetFixedValue(v);
       else _cells[i].SetValue(v);
-      cell_value_t r, c, b;
-      GetCellGroups(i, r, c, b);
+      cell_value_t r = _cells[i].GetRow(), c = _cells[i].GetColumn(), b = _cells[i].GetBlock();
       std::bitset<T> affected = _rows[r] | _cols[c] | _blks[b];
       for (cell_value_t j = 0; j < _cells.size(); ++j) {
         if (affected[j]) _cells[j].ResetOption(v);
@@ -106,6 +104,9 @@ public:
       _rows[r].set(i);
       _cols[c].set(i);
       _blks[b].set(i);
+      _cells[i].SetRow(r);
+      _cells[i].SetColumn(c);
+      _cells[i].SetBlock(b);
     }
   }
   
@@ -135,14 +136,13 @@ public:
       cell_value_t v = _cells[i].GetValue();
       if (!v) continue;
       v -= 1;
-      cell_value_t row, col, blk;
-      GetCellGroups(i, row, col, blk);
-      if (all_groups[row][v]) return false;
-      else all_groups[row].set(v);
-      if (all_groups[col + N][v]) return false;
-      else all_groups[col + N].set(v);
-      if (all_groups[blk + N + N][v]) return false;
-      else all_groups[blk + N + N].set(v);
+      cell_value_t r = _cells[i].GetRow(), c = _cells[i].GetColumn(), b = _cells[i].GetBlock();
+      if (all_groups[r][v]) return false;
+      else all_groups[r].set(v);
+      if (all_groups[c + N][v]) return false;
+      else all_groups[c + N].set(v);
+      if (all_groups[b + N + N][v]) return false;
+      else all_groups[b + N + N].set(v);
     }
     return true;
   }
@@ -236,6 +236,7 @@ private:
     }
     std::cout << "+" << std::endl;
   }
+  
   void PrintRowGridLine(const std::bitset<T> &row) const {
     cell_value_t col = 0;
     for (cell_value_t i = 0; i < row.size(); ++i) {
