@@ -28,6 +28,7 @@ class SudokuCell {
   std::bitset<N> _possibleValues;
   values_t _value;       // logical OR with _mask to set if is a clue
   values_t _row, _col, _blk;
+  work_t _idx;
   
 public:
   SudokuCell() : _value(0) { _possibleValues.set(); }
@@ -45,10 +46,20 @@ public:
   inline values_t GetRow() const { return _row; }
   inline values_t GetColumn() const { return _col; }
   inline values_t GetBlock() const { return _blk; }
+  inline work_t GetIndex() const { return _idx; }
   inline void SetRow(values_t r) { _row = r; }
   inline void SetColumn(values_t r) { _col = r; }
   inline void SetBlock(values_t r) { _blk = r; }
+  inline void SetIndex(work_t i) { _idx = i; }
 };
+
+template <values_t N>
+bool operator==(SudokuCell<N>* lhs, SudokuCell<N>* rhs) {
+  return (lhs->GetRow() == rhs->GetRow()
+          && lhs->GetColumn() == rhs->GetColumn()
+          && lhs->GetBlock() == rhs->GetBlock());
+}
+
 template <dimension_t Height, dimension_t Width = Height>
 class SudokuGrid;
 
@@ -92,7 +103,7 @@ public:
   
 public:
   SudokuGrid() {
-    for (values_t i = 0; i < _cells.size(); ++i) {
+    for (work_t i = 0; i < _cells.size(); ++i) {
       values_t r, c, b;
       GetCellGroups(i, r, c, b);
       _rows[r].set(i);
@@ -101,6 +112,7 @@ public:
       _cells[i].SetRow(r);
       _cells[i].SetColumn(c);
       _cells[i].SetBlock(b);
+      _cells[i].SetIndex(i);
     }
   }
   
