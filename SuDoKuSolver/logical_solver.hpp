@@ -81,6 +81,7 @@ private:
   Possibles DetermineCombinedOptions(iterator_t, iterator_t);
   
   void GetNakedNupleHeader(values_t, values_t, std::stringstream&);
+  void GetHiddenNupleHeader(values_t, values_t, Possibles&, std::stringstream&);
   
   template <typename iterator_t>
   void GetNupleCombination(iterator_t, iterator_t, std::stringstream&);

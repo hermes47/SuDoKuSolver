@@ -204,12 +204,14 @@ bool LogicalSolver<H,W>::NakedNuples(values_t nuple) {
     
     // Iterate over all possible nuple length combinations of valids
     auto c_gen = MakeCombinations(valids.begin(), valids.end(), nuple);
-    Group c, c_;
+    Group c, c_;  // combination and complement combination
     while (c_gen(std::back_inserter(c), std::back_inserter(c_))) {
       Possibles coptions = DetermineCombinedOptions(c.begin(), c.end());
+      // Is a naked nuple if # of coptions is equal to nuple
       if (coptions.count() == nuple) {
         Possibles c_options = DetermineCombinedOptions(c_.begin(), c_.end());
         Possibles intersection = coptions & c_options;
+        // may not be any overlap between the naked nuple and rest of group
         if (intersection.any()) {
           for (Cell* cell : c_) {
             cell->GetPossibleOptions(intersection);
@@ -242,7 +244,55 @@ bool LogicalSolver<H,W>::NakedNuples(values_t nuple) {
 
 template <dimension_t H, dimension_t W>
 bool LogicalSolver<H,W>::HiddenNuples(values_t nuple) {
-  return false;
+  bool added = false;
+  std::stringstream ss;
+  
+  for (values_t g_idx = 0; g_idx < _grps.size(); ++g_idx) {
+    // Find all cells in group that don't have values set
+    Group &grp = _grps[g_idx];
+    Group valids;
+    for (Cell* cell : grp) {
+      if (!cell->GetValue()) valids.push_back(cell);
+    }
+    
+    // Iterate over all possible nuple length combinations of valids
+    auto c_gen = MakeCombinations(valids.begin(), valids.end(), nuple);
+    Group c, c_;// combination and complement combination
+    while (c_gen(std::back_inserter(c), std::back_inserter(c_))) {
+      Possibles coptions = DetermineCombinedOptions(c.begin(), c.end());
+      Possibles c_options = DetermineCombinedOptions(c_.begin(), c_.end());
+      Possibles c_unique = coptions & (~c_options);
+      // Is a hidden nuple if # of unique options is equal to nuple
+      if (c_unique.count() == nuple) {
+        Possibles to_remove = ~c_unique;
+        // Remove excess options from combination
+        for (Cell* cell : c) {
+          Possibles intersection;
+          cell->GetPossibleOptions(intersection);
+          intersection &= to_remove;
+          
+          if (!intersection.any()) continue;
+          bool first_remove = false;
+          for (values_t val = 0; val < intersection.size(); ++val) {
+            if (!intersection[val]) continue;
+            added = true;
+            _acts.emplace_back(CLEAR_VALUE, val + 1, cell->GetIndex(), _group);
+            if (!first_remove) {
+              GetHiddenNupleHeader(cell->GetIndex(), nuple, c_unique, ss);
+              ss << " removes " << val + 1;
+              first_remove = true;
+            } else ss << "," << val + 1;
+          }
+          ss << " from r" << cell->GetRow() << "c" << cell->GetColumn() << "." << std::endl;
+        }
+      }
+      c.clear();
+      c_.clear();
+    }
+  }
+  
+  if (added && !_quiet) std::cout << ss.str();
+  return added;
 }
 
 template <dimension_t H, dimension_t W>
@@ -288,6 +338,26 @@ void LogicalSolver<H,W>::GetNakedNupleHeader(values_t idx, values_t nuple, std::
   if (nuple_names.find(nuple) != nuple_names.end()) ss << nuple_names.at(nuple);
   else ss << nuple << "-uple";
   ss << "]";
+}
+
+template <dimension_t H, dimension_t W>
+void LogicalSolver<H,W>::GetHiddenNupleHeader(values_t idx, values_t nuple, Possibles& g, std::stringstream& ss) {
+  ss << "[HIDDEN ";
+  if (nuple_names.find(nuple) != nuple_names.end()) ss << nuple_names.at(nuple);
+  else ss << nuple << "-uple";
+  ss << "] (";
+  bool first_out = false;
+  for (values_t i = 0; i < g.size(); ++ i) {
+    if (!g[i]) continue;
+    if (!first_out) {
+      first_out = true;
+      ss << i + 1;
+    } else ss << "," << i + 1;
+  }
+  ss << ") in ";
+  if (idx >= 2 * num_vals) ss << "b" << _g.GetCell(idx).GetBlock();
+  else if (idx >= 1 * num_vals) ss << "c" << _g.GetCell(idx).GetColumn();
+  else ss << "r" << _g.GetCell(idx).GetRow();
 }
 
 template <dimension_t H, dimension_t W>
