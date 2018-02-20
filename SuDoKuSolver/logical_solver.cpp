@@ -6,6 +6,8 @@
 //  Copyright © 2018 Hermes Productions. All rights reserved.
 //
 
+#include "logical_solver.hpp"
+
 template <dimension_t H, dimension_t W>
 LogicalSolver<H,W>::LogicalSolver(Grid grid)
 : _g(grid), _group(0), _next_act(0) {
@@ -85,8 +87,10 @@ bool LogicalSolver<H,W>::PerformLogicalSolving(bool quiet) {
   }
   
   // Only reach here if the grid has been solved.
-  std::cout << "Grid solved using " << _acts.size() << " logically derived actions." << std::endl;
-  _g.DisplayGrid();
+  if (!quiet) {
+    std::cout << "Grid solved using " << _acts.size() << " logically derived actions." << std::endl;
+    _g.DisplayGrid();
+  }
   return true;
 }
 
@@ -98,8 +102,7 @@ bool LogicalSolver<H,W>::NakedSingles() {
   for (work_t idx = 0; idx < num_cells; ++idx) {
     Cell &cell = _g.GetCell(idx);
     if (cell.NumOptions() == 1) {
-      Possibles options;
-      cell.GetPossibleOptions(options);
+      Possibles options = cell.GetPossibleOptions();
       values_t val = DetermineSingleValue(options);
       ss << "[NAKED SINGLE] " << val << " is the only option in ";
       ss << "r" << cell.GetRow() << "c" << cell.GetColumn() << "." << std::endl;
@@ -122,12 +125,10 @@ bool LogicalSolver<H,W>::HiddenSingles() {
   for (values_t i = 0; i < _grps.size(); ++i) {
     Group &grp = _grps[i];
     for (Cell* test_cell : grp) {
-      Possibles options;
-      test_cell->GetPossibleOptions(options);
+      Possibles options = test_cell->GetPossibleOptions();
       for (Cell* other_cell : grp) {
         if (test_cell == other_cell) continue;
-        Possibles tmp;
-        other_cell->GetPossibleOptions(tmp);
+        Possibles tmp = other_cell->GetPossibleOptions();
         options &= (~tmp);
       }
       if (options.count() == 1) {
@@ -214,7 +215,7 @@ bool LogicalSolver<H,W>::NakedNuples(values_t nuple) {
         // may not be any overlap between the naked nuple and rest of group
         if (intersection.any()) {
           for (Cell* cell : c_) {
-            cell->GetPossibleOptions(intersection);
+            intersection = cell->GetPossibleOptions();
             intersection &= coptions;
             if (!intersection.any()) continue;
             bool first_remove = false;
@@ -267,8 +268,7 @@ bool LogicalSolver<H,W>::HiddenNuples(values_t nuple) {
         Possibles to_remove = ~c_unique;
         // Remove excess options from combination
         for (Cell* cell : c) {
-          Possibles intersection;
-          cell->GetPossibleOptions(intersection);
+          Possibles intersection = cell->GetPossibleOptions();
           intersection &= to_remove;
           
           if (!intersection.any()) continue;
@@ -322,8 +322,7 @@ template <typename I>
 typename LogicalSolver<H, W>::Possibles LogicalSolver<H,W>::DetermineCombinedOptions(I begin, I end) {
   Possibles o;
   for (; begin != end; ++begin) {
-    Possibles tmp;
-    (*begin)->GetPossibleOptions(tmp);
+    Possibles tmp = (*begin)->GetPossibleOptions();
     o |= tmp;
   }
   return o;
@@ -369,3 +368,10 @@ void LogicalSolver<H,W>::GetNupleCombination(I begin, I end, std::stringstream &
     ss << "r" << (*begin)->GetRow() << "c" << (*begin)->GetColumn();
   }
 }
+
+// Explicit instanation
+#define GRID_SIZE(x,y)\
+template class LogicalSolver<x,y>;
+
+#include "gridsizes.itm"
+#undef GRID_SIZE

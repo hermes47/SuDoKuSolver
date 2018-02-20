@@ -11,40 +11,36 @@
 
 #include <cstdint>
 
-#include "grid.hpp"
+#include "grid_old.hpp"
 
 template <dimension_t Height, dimension_t Width>
-bool SolveGrid(SudokuGrid<Height,Width>& grid, bool quiet) {
+bool SolveGrid(_SudokuGrid<Height,Width>& grid, bool quiet, size_t max_solutions) {
   static const values_t num_vals = Height * Width;
   static const work_t num_cells = num_vals * num_vals;
-  typedef SudokuCell<num_vals> Cell;
-  typedef std::array<Cell*, num_vals> Group;
+  typedef _SudokuCell<num_vals> Cell;
   typedef std::array<values_t, num_cells> GridState;
+  typedef std::bitset<num_vals> Possibles;
   
   GridState current;
   grid.GetState(current);
   
-  std::vector<GridState*> to_run;
-  to_run.push_back(&current);
-  size_t count = 0;
-  bool solved = false;
+  std::vector<GridState> to_run;
+  to_run.push_back(current);
+  size_t count = 0, solutions = 0;
   while (to_run.size()) {
-    GridState state = *to_run.back();
+    GridState state = to_run.back();
     to_run.pop_back();
     grid.SetState(state);
     ++count;
     
     // Check validity and if solved
     if (!grid.IsValidState()) continue;
-    if (grid.IsSolved() && solved) {
-      if (!quiet) std::cerr << "Grid has multiple solutions." << std::endl;
-      solved = false;
-      break;
-    } else if (grid.IsSolved()) {
-      grid._solved = state;
-      solved = true;
+    if (grid.IsSolved()) {
+      ++solutions;
+      grid._solved = GridState(state);
       continue;
     }
+    if (solutions >= max_solutions) break;
     
     // Find smallest optioned cell
     values_t smallCell = num_cells;
@@ -58,20 +54,18 @@ bool SolveGrid(SudokuGrid<Height,Width>& grid, bool quiet) {
     }
     
     // Branch on all the options
-    std::bitset<num_vals> options;
-    grid._cells[smallCell].GetPossibleOptions(options);
+    Possibles options = grid._cells[smallCell].GetPossibleOptions();
     for (values_t i = 0; i < options.size(); ++i) {
       if (!options[i]) continue;
-      GridState *newState = new GridState();
-      std::copy(state.begin(), state.end(), newState->begin());
-      newState->at(smallCell) = i + 1;
+      GridState newState;
+      std::copy(state.begin(), state.end(), newState.begin());
+      newState.at(smallCell) = i + 1;
       to_run.push_back(newState);
     }
-    
   }
   
   if (!quiet) {
-    if (!solved) std::cout << "No valid solution found (" << count << " iterations)." << std::endl;
+    if (!solutions) std::cout << "No valid solution found (" << count << " iterations)." << std::endl;
     else {
       grid.SetState(grid._solved);
       std::cout << "Solution found (" << count << " iterations) : " << std::endl;
@@ -79,7 +73,8 @@ bool SolveGrid(SudokuGrid<Height,Width>& grid, bool quiet) {
     }
   }
   grid.SetState(current);
-  return solved;
+  grid._num_solutions = solutions;
+  return solutions;
 }
 
 #endif /* SUDOKUSOLVER_SOLVER_HPP */

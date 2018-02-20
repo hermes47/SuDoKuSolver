@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "combinations.hpp"
-#include "grid.hpp"
+#include "grid_old.hpp"
 
 enum Action {
   SET_VALUE,
@@ -46,8 +46,8 @@ class LogicalSolver {
     {10, "DECUPLE" },
   };
   
-  typedef SudokuGrid<Height, Width>& Grid;
-  typedef SudokuCell<num_vals> Cell;
+  typedef _SudokuGrid<Height, Width>& Grid;
+  typedef _SudokuCell<num_vals> Cell;
   typedef std::bitset<num_vals> Possibles;
   typedef std::bitset<num_cells> AllCells;
   typedef std::vector<Cell*> Group;
@@ -88,5 +88,5 @@ private:
   
 };
 
-#include "logical_solver.cpp"
+//#include "logical_solver.cpp"
 #endif /* SUDOKUSOLVER_LOGICAL_SOLVER_HPP */

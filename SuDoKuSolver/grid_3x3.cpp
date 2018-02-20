@@ -14,7 +14,7 @@ bool SolveGrid(Grid3x3& grid) {
   return SolveGrid<3,3>(grid);
 }
 
-bool LogicallySolveGrid(Grid3x3& grid) {
+bool LogicallySolveGrid(Grid3x3& grid, bool quiet) {
   LogicalSolver<3, 3> solver(grid);
-  return solver.PerformLogicalSolving();
+  return solver.PerformLogicalSolving(quiet);
 }

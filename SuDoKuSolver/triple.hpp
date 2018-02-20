@@ -113,7 +113,7 @@ namespace std {
     return !(__x < __y);
   }
   
-  // swap implementation
+  // swap implementations
   template<class _T1, class _T2, class _T3>
   inline void swap(triple<_T1, _T2, _T3>& __x, triple<_T1, _T2, _T3>& __y) {
     __x.swap(__y);

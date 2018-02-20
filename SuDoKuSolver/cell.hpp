@@ -13,6 +13,7 @@
 
 #include <bitset>
 #include <limits>
+#include <utility>
 
 #include "utility.hpp"
 
@@ -29,7 +30,37 @@ public:
   SudokuCell()
   : _row(0), _col(0), _blk(0), _idx(0), _clue(false) { _values.set(); }
   
+  // Move constructor
+  SudokuCell(SudokuCell&& c)
+  : _values(std::move(c._values)), _row(std::move(c._row)),
+  _col(std::move(c._col)), _blk(std::move(c._blk)),
+  _idx(std::move(c._idx)), _clue(std::move(c._clue)) { }
   
+  // Copy constructor
+  SudokuCell(const SudokuCell& c)
+  : _values(c._values), _row(c._row), _col(c._col), _blk(c._blk),
+  _idx(c._idx), _clue(c._clue) { }
+  
+  // Assignment operator
+  SudokuCell& operator=(SudokuCell&& c) {
+    _values = std::move(c._values);
+    _row = std::move(c._row);
+    _col = std::move(c._col);
+    _blk = std::move(c._blk);
+    _idx = std::move(c._idx);
+    _clue = std::move(c._clue);
+    return *this;
+  }
+  
+  // make swapable
+//  void swap(SudokuCell&& c) {
+//    std::swap(_values, c._values);
+//    std::swap(_row, c._row);
+//    std::swap(_col, c._col);
+//    std::swap(_blk, c._blk);
+//    std::swap(_idx, c._idx);
+//    std::swap(_clue, c._clue);
+//  }
   
   inline val_t GetValue() const {
     return _values.count() > 1 ? 0 : __find_first(_values) + 1;
