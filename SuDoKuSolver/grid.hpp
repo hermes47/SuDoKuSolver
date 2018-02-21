@@ -14,17 +14,18 @@
 #include <array>
 #include <bitset>
 #include <cassert>
+#include <string>
 #include <vector>
 
 #include "cell.hpp"
 
 // Forward declare
-template <dim_t H, dim_t W = H, val_t N = H * H * W * W>
+template <INT H, INT W = H, INT N = H * H * W * W>
 class SudokuGrid;
 
-template <dim_t H, dim_t W, val_t N>
+template <INT H, INT W, INT N>
 class SudokuGrid {
-  static const val_t G = H * W;
+  static const INT G = H * W;
   
   static_assert(G <= 100, "Only support up to 100 values per group.");
   static_assert((N % G) == 0, "N must be divisible by H*W.");
@@ -32,8 +33,8 @@ class SudokuGrid {
   
 public:
   typedef SudokuCell<G> Cell;
-  typedef std::bitset<G> Values;
-  typedef std::bitset<N> AllCells;
+  typedef std_x::bitset<G> Values;
+  typedef std_x::bitset<N> AllCells;
   typedef std::array<Values, N> GridState;  // should be const Values?
   
 private:
@@ -42,11 +43,13 @@ private:
   std::vector<AllCells> _grps;
   std::array<AllCells, N> _affected;
   GridState _initial, _solved;
-  val_t _num_solutions;
+  INT _num_solutions;
   
 public:
   // Default constructor
   SudokuGrid();
+  
+  SudokuGrid(const std::string&);
   
   // Move constructor
   SudokuGrid(SudokuGrid&&);
@@ -70,14 +73,23 @@ public:
   bool IsSolved();
   
   // Get a cell by index. Only do bounds checking in when DEBUG defined
-  inline Cell& GetCell(val_t i) { return _AT(_cells, i); }
-  inline AllCells& GetGroup(val_t i) const { return _AT(_grps, i); }
-  inline virtual AllCells& GetRow(val_t i) const { return GetGroup(i); }
-  inline virtual AllCells& GetColumns(val_t i) const { return GetGroup(i+G); }
-  inline virtual AllCells& GetBlock(val_t i) const { return GetGroup(i+G+G); }
+  inline Cell& GetCell(INT i) { return _AT(_cells, i); }
+  inline const Cell& GetCell(INT i) const { return _AT(_cells, i); }
+  inline const AllCells& GetGroup(INT i) const { return _AT(_grps, i); }
+  inline virtual const AllCells& GetRow(INT i) const { return GetGroup(i); }
+  inline virtual const AllCells& GetColumn(INT i) const { return GetGroup(i+G); }
+  inline virtual const AllCells& GetBlock(INT i) const { return GetGroup(i+G+G); }
+  inline const AllCells& GetAffected(INT i) const { return _AT(_affected,i); }
+  inline const AllCells& GetAffected(const Cell& c) const { return _AT(_affected,c.GetIndex()); }
   
+  void DisplayGrid() const;
+  
+private:
   virtual void SetGroups();
   virtual void SetAffected();
+  
+  virtual void PrintSeperatorGridLine() const;
+  virtual void PrintRowGridLine(INT) const;
   
   
 };

@@ -14,7 +14,7 @@
 
 #include <utility>
 
-namespace std {
+namespace std_x {
   
   // triple hold three objects of arbitrary type
   template<class _T1, class _T2, class _T3>
@@ -139,17 +139,17 @@ namespace std {
     typedef _Tp __type;
   };
   template<typename _Tp>
-  struct __strip_reference_wrapper<reference_wrapper<_Tp>> {
+  struct __strip_reference_wrapper<std::reference_wrapper<_Tp>> {
     typedef _Tp& __type;
   };
   template<typename _Tp>
-  struct __strip_reference_wrapper<const reference_wrapper<_Tp>> {
+  struct __strip_reference_wrapper<const std::reference_wrapper<_Tp>> {
     typedef _Tp& __type;
   };
   
   template<typename _Tp>
   struct __decay_and_strip {
-    typedef typename __strip_reference_wrapper<typename decay<_Tp>::type>::__type __type;
+    typedef typename __strip_reference_wrapper<typename std::decay<_Tp>::type>::__type __type;
   };
   
   template<class _T1, class _T2, class _T3>

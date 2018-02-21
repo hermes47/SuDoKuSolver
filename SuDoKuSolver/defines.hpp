@@ -5,8 +5,9 @@
 #include <cassert>
 #include <cstdint>
 
-typedef int32_t dim_t;        // Type used for cell values
-typedef int32_t val_t;        // Type used for cell manipulation
+typedef int32_t INT;
+typedef uint32_t UINT;
+typedef float FLT;
 
 // Bounds checking only when debug mode
 #ifdef DEBUG

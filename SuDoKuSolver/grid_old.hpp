@@ -67,11 +67,11 @@ bool operator==(_SudokuCell<N>& lhs, _SudokuCell<N>& rhs) {
 }
 
 template<dimension_t H, dimension_t W>
-inline std::triple<values_t, values_t, values_t> GetCellGroups(values_t i) {
+inline std_x::triple<values_t, values_t, values_t> GetCellGroups(values_t i) {
   values_t c = i % (H * W);
   values_t R = i / (H * W * H);
   values_t C = c / W;
-  return std::make_triple(i / (H * W), c, R * H + C);
+  return std_x::make_triple(i / (H * W), c, R * H + C);
 }
 
 template <dimension_t Height, dimension_t Width = Height>

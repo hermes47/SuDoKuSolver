@@ -12,23 +12,34 @@
 #include "defines.hpp"
 
 #include <bitset>
-#include <limits>
 #include <utility>
 
 #include "utility.hpp"
 
-template <val_t N>
+template <INT N>
 class SudokuCell {
-  typedef std::bitset<N> Values;
+  typedef std_x::bitset<N> Values;
   
-  Values _values;
-  val_t _row, _col, _blk, _idx;
+  Values _values, _initial;
+  INT _row, _col, _blk, _idx;
   bool _clue;
   
 public:
   // Default constructor
   SudokuCell()
-  : _row(0), _col(0), _blk(0), _idx(0), _clue(false) { _values.set(); }
+  : _row(-1), _col(-1), _blk(-1), _idx(-1), _clue(false) { _values.set(); }
+  
+  // Construct cell with given index
+  SudokuCell(INT i)
+  : _row(-1), _col(-1), _blk(-1), _idx(i), _clue(false) { _values.set(); }
+  
+  // Construct cell with given index and value. Calling grid is responsible
+  // for propagation of value effect
+  SudokuCell(INT i, INT v)
+  : _row(-1), _col(-1), _blk(-1), _idx(i), _clue(false) {
+    _values.reset();
+    _values.set(v);
+  }
   
   // Move constructor
   SudokuCell(SudokuCell&& c)
@@ -52,77 +63,67 @@ public:
     return *this;
   }
   
-  // make swapable
-//  void swap(SudokuCell&& c) {
-//    std::swap(_values, c._values);
-//    std::swap(_row, c._row);
-//    std::swap(_col, c._col);
-//    std::swap(_blk, c._blk);
-//    std::swap(_idx, c._idx);
-//    std::swap(_clue, c._clue);
-//  }
-  
-  inline val_t GetValue() const {
-    return _values.count() > 1 ? 0 : __find_first(_values) + 1;
+  inline INT GetValue() const {
+    return _values.count() > 1 ? 0 : __find_first<N>(_values) + 1;
   }
   
-  inline void SetValue(val_t v) {
+  inline void SetValue(INT v) {
     // Grid is responsible for propagating this set through to affected cells
-    assert(v > 0);
-    assert(!_clue);
+    if (_clue) return;
     _values.reset();
     _values.set(v - 1);
   }
   
-  inline void SetFixedValue(val_t v) {
+  inline void SetFixedValue(INT v) {
     SetValue(v);
     _clue = true;
   }
   
   inline bool IsFixed() const { return _clue; }
-  inline void ToggleOption(val_t p) { _values.flip(p - 1); }
-  inline void SetOption(val_t p) { _values.set(p - 1); }
-  inline void ResetOption(val_t p) { _values.reset(p - 1); }
-  inline Values& GetPossibleValues() const { return _values; }
-  inline bool IsPossibleValue(val_t i) const { return _values[i]; }
-  inline val_t NumOptions() const { return (val_t)_values.count(); }
-  inline void Reset() { _values.set(); }
-  inline val_t GetRow() const { return _row; }
-  inline val_t GetColumn() const { return _col; }
-  inline val_t GetBlock() const { return _blk; }
-  inline val_t GetIndex() const { return _idx; }
-  inline void SetRow(val_t r) { _row = r; }
-  inline void SetColumn(val_t r) { _col = r; }
-  inline void SetBlock(val_t r) { _blk = r; }
-  inline void SetIndex(val_t i) { _idx = i; }
+  inline void ToggleOption(INT p) { if (!_clue) _values.flip(p - 1); }
+  inline void SetOption(INT p) {  if (!_clue) _values.set(p - 1); }
+  inline void ResetOption(INT p) {  if (!_clue) _values.reset(p - 1); }
+  inline Values GetPossibleValues() const { return _values; }
+  inline bool IsPossibleValue(INT i) const { return _AT(_values, i); }
+  inline INT NumOptions() const { return (INT)_values.count(); }
+  inline void Reset() { _values = _initial; }
+  inline INT GetRow() const { return _row; }
+  inline INT GetColumn() const { return _col; }
+  inline INT GetBlock() const { return _blk; }
+  inline INT GetIndex() const { return _idx; }
+  inline void SetRow(INT r) { _row = r; }
+  inline void SetColumn(INT r) { _col = r; }
+  inline void SetBlock(INT r) { _blk = r; }
+  inline void SetIndex(INT i) { _idx = i; }
+  inline void SetCurrentAsInitial() { _initial = _values; }
 };
 
 // Comparison operators
-template <val_t N>
+template <INT N>
 inline bool operator==(SudokuCell<N>& l, SudokuCell<N>& r) {
   return l.GetIndex() == r.GetIndex();
 }
 
-template <val_t N>
+template <INT N>
 inline bool operator!=(SudokuCell<N>& l, SudokuCell<N>& r) {
   return l.GetIndex() != r.GetIndex();
 }
 
-template <val_t N>
+template <INT N>
 inline bool operator<(SudokuCell<N>& l, SudokuCell<N>& r) {
   return l.GetIndex() < r.GetIndex();
 }
 
-template <val_t N>
+template <INT N>
 inline bool operator>(SudokuCell<N>& l, SudokuCell<N>& r) {
   return l.GetIndex() > r.GetIndex();
 }
-template <val_t N>
+template <INT N>
 inline bool operator<=(SudokuCell<N>& l, SudokuCell<N>& r) {
   return l.GetIndex() <= r.GetIndex();
 }
 
-template <val_t N>
+template <INT N>
 inline bool operator>=(SudokuCell<N>& l, SudokuCell<N>& r) {
   return l.GetIndex() >= r.GetIndex();
 }
