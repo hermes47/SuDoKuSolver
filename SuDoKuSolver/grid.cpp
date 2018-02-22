@@ -12,6 +12,7 @@
 #include <string>
 
 #include "grid.hpp"
+#include "solver_new.hpp"
 
 // Default constructor creates all cells, then calls SetGroups and SetAffected
 // Any classes inheriting should call this constructor in initalisation list
@@ -49,7 +50,21 @@ SudokuGrid<H,W,N>::SudokuGrid(const std::string& s)
   }
   
   // Set Initial state
-  for (Cell& c : _cells) c.SetCurrentAsInitial();
+  for (Cell& c : _cells) {
+    c.SetCurrentAsInitial();
+    _AT(_initial, c.GetIndex()) = c.GetPossibleValues();
+  }
+}
+
+template<INT H, INT W, INT N>
+const typename SudokuGrid<H,W,N>::GridState& SudokuGrid<H,W,N>::GetSolvedState() {
+  // Set solved state
+  if (_num_solutions < 0) {
+    UINT count;
+    SolveGridNew<H, W, N>(_initial, _grps, _affected, _solved, count, true, 2);
+    _num_solutions = count;
+  }
+  return _solved;
 }
 
 // Set groups default method. Only works when N = H * W * H * W
@@ -113,8 +128,14 @@ void SudokuGrid<H,W,N>::PrintRowGridLine(INT r) const {
     if (!row[i]) continue;
     if (!(c % W)) std::cout << "| ";
     INT v = GetCell(i).GetValue();
-    if (v >= 1 && v <= N) std::cout << (int)v << " ";
-    else std::cout << "  ";
+    // Convert value to char
+    char o;
+    if (v == 0) o = '.';
+    else if (v >= 1 && v <= 9) o = '0' + v;
+    else if (v == 10) o = '0';
+    else if (v >= 11 && v <= 36) o = '6' + v;
+    else o = '<' + v;
+    std::cout << o << " ";
     ++c;
   }
   std::cout << "|" << std::endl;
@@ -125,5 +146,6 @@ void SudokuGrid<H,W,N>::PrintRowGridLine(INT r) const {
 template class SudokuGrid<x,y,z>;
 
 GRID_SIZE(3,3,81);
+GRID_SIZE(2,2,16);
 //#include "gridsizes.itm"
 #undef GRID_SIZE

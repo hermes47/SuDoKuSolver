@@ -37,17 +37,19 @@ public:
   typedef std_x::bitset<N> AllCells;
   typedef std::array<Values, N> GridState;  // should be const Values?
   
-private:
+public:
   std::array<Cell, N> _cells;
   // Order of groups should be rows, columns, blocks, other
   std::vector<AllCells> _grps;
   std::array<AllCells, N> _affected;
   GridState _initial, _solved;
-  INT _num_solutions;
+  INT _num_solutions = -1;
   
-public:
+private:
   // Default constructor
   SudokuGrid();
+  
+public:
   
   SudokuGrid(const std::string&);
   
@@ -60,18 +62,6 @@ public:
   // Assignment operator
   SudokuGrid& operator=(SudokuGrid&&);
   
-  // Reset state to initial state
-  void Reset();
-  
-  // Check if grid is in a valid state
-  bool IsValid() const;
-  
-  // Check if grid can be solved
-  bool IsSolvable();
-  
-  // Check if grid is solved
-  bool IsSolved();
-  
   // Get a cell by index. Only do bounds checking in when DEBUG defined
   inline Cell& GetCell(INT i) { return _AT(_cells, i); }
   inline const Cell& GetCell(INT i) const { return _AT(_cells, i); }
@@ -79,10 +69,26 @@ public:
   inline virtual const AllCells& GetRow(INT i) const { return GetGroup(i); }
   inline virtual const AllCells& GetColumn(INT i) const { return GetGroup(i+G); }
   inline virtual const AllCells& GetBlock(INT i) const { return GetGroup(i+G+G); }
+  
+  // Get the set of cells affected by a given cell being set
   inline const AllCells& GetAffected(INT i) const { return _AT(_affected,i); }
   inline const AllCells& GetAffected(const Cell& c) const { return _AT(_affected,c.GetIndex()); }
   
+  // Display the grid
   void DisplayGrid() const;
+  void DisplayGridString() const;
+  
+  // State stuff
+  inline const GridState& GetInitialState() const { return _initial; }
+  bool SetState(const GridState&);
+  void Reset();
+  const GridState& GetSolvedState();
+  // Check if grid is in a valid state
+  bool IsValid() const;
+  // Check if grid can be solved
+  bool IsSolvable() const;
+  // Check if grid is solved
+  bool IsSolved() const;
   
 private:
   virtual void SetGroups();

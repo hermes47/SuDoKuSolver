@@ -69,7 +69,7 @@ bool SolveGrid(_SudokuGrid<Height,Width>& grid, bool quiet, size_t max_solutions
     else {
       grid.SetState(grid._solved);
       std::cout << "Solution found (" << count << " iterations) : " << std::endl;
-      grid.DisplayGrid();
+//      grid.DisplayGrid();
     }
   }
   grid.SetState(current);

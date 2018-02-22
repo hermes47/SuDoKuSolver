@@ -1,4 +1,5 @@
 #define EVEN_GRID(x) RECT_GRID(x,x)
+//#define RECT_GRID(x,y) GRID_SIZE(x,y,x*y*x*y)
 #define RECT_GRID(x,y) GRID_SIZE(x,y)
 #define MULT_GRID(x,y,z) GRID_SIZE(x,y,z)
 EVEN_GRID(2)
