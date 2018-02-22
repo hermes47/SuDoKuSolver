@@ -180,7 +180,7 @@ bool LogicalSolver<H,W,N>::HiddenSingle() {
         UINT val = __find_first<H * W>(options);
         UINT remove = __find_first<H * W>(_AT(_solve_state.first, ga_idx));
         while (remove < H*W) {
-          if (remove != val) _actions.emplace_back(val, ga_idx, _action_group);
+          if (remove != val) _actions.emplace_back(remove, ga_idx, _action_group);
           remove = __find_next<H * W>(_AT(_solve_state.first, ga_idx), remove);
         }
       }
@@ -307,7 +307,8 @@ void LogicalSolver<H,W,N>::SetSingleValue(UINT val, UINT idx) {
   // Adds actions to remove val from all cells affected by idx
   UINT affect = __find_first<N>(_AT(this->_affected, idx));
   while (affect < N) {
-    _actions.emplace_back(val, affect, _action_group);
+    if (_solve_state.first[affect][val])
+      _actions.emplace_back(val, affect, _action_group);
     affect = __find_next<N>(_AT(this->_affected, idx), affect);
   }
 }
