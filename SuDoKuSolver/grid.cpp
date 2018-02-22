@@ -158,27 +158,29 @@ void SudokuGrid<H,W,N>::SetAffected() {
 }
 
 template <UINT H, UINT W, UINT N>
-void SudokuGrid<H,W,N>::DisplayGrid() const {
+std::ostream& SudokuGrid<H,W,N>::DisplayGrid(std::ostream& s) const {
   for (INT r = 0; r < G; ++r) {
-    if (!(r % H)) PrintSeperatorGridLine();
-    PrintRowGridLine(r);
+    if (!(r % H)) PrintSeperatorGridLine(s);
+    PrintRowGridLine(r, s);
   }
-  PrintSeperatorGridLine();
+  PrintSeperatorGridLine(s);
+  return s;
 }
 
 template <UINT H, UINT W, UINT N>
-void SudokuGrid<H,W,N>::DisplayGridString() const {
+std::ostream& SudokuGrid<H,W,N>::DisplayGridString(std::ostream& s) const {
   for (const Cell& cell : _cells) {
     INT v = cell.GetValue();
     char o;
-    if (v == 0) o = '.';
+    if (cell.NumOptions() == 0) o = '+';
+    else if (v == 0) o = '.';
     else if (v >= 1 && v <= 9) o = '0' + v;
     else if (v == 10) o = '0';
     else if (v >= 11 && v <= 36) o = '6' + v;
     else o = '<' + v;
-    std::cout << o;
+    s << o;
   }
-  std::cout << std::endl;
+  return s;
 }
 
 template <UINT H, UINT W, UINT N>
@@ -195,21 +197,21 @@ bool SudokuGrid<H,W,N>::SetState(const GridState & state) {
 }
 
 template<UINT H, UINT W, UINT N>
-void SudokuGrid<H,W,N>::PrintSeperatorGridLine() const {
+void SudokuGrid<H,W,N>::PrintSeperatorGridLine(std::ostream& s) const {
   for (INT i = 0; i < G; ++i) {
-    if (!(i % W)) std::cout << "+-";
-    std::cout << "--";
+    if (!(i % W)) s << "+-";
+    s << "--";
   }
-  std::cout << "+" << std::endl;
+  s << "+" << std::endl;
 }
 
 template<UINT H, UINT W, UINT N>
-void SudokuGrid<H,W,N>::PrintRowGridLine(INT r) const {
+void SudokuGrid<H,W,N>::PrintRowGridLine(INT r, std::ostream& s) const {
   INT c = 0;
   const AllCells& row = GetRow(r);
   for (INT i = 0; i < N; ++i) {
     if (!row[i]) continue;
-    if (!(c % W)) std::cout << "| ";
+    if (!(c % W)) s << "| ";
     INT v = GetCell(i).GetValue();
     // Convert value to char
     char o;
@@ -218,10 +220,10 @@ void SudokuGrid<H,W,N>::PrintRowGridLine(INT r) const {
     else if (v == 10) o = '0';
     else if (v >= 11 && v <= 36) o = '6' + v;
     else o = '<' + v;
-    std::cout << o << " ";
+    s << o << " ";
     ++c;
   }
-  std::cout << "|" << std::endl;
+  s << "|" << std::endl;
 }
 
 // Set groups default method. Only works when N = H * W * H * W

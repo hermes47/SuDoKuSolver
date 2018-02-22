@@ -82,8 +82,8 @@ public:
   inline const AllCells& GetAffected(const Cell& c) const { return _AT(_affected,c.GetIndex()); }
   
   // Display the grid
-  void DisplayGrid() const;
-  void DisplayGridString() const;
+  std::ostream& DisplayGrid(std::ostream&) const;
+  std::ostream& DisplayGridString(std::ostream&) const;
   
   // State stuff
   inline const GridState& GetInitialState() const { return _initial; }
@@ -105,10 +105,13 @@ private:
   virtual void SetGroups();
   virtual void SetAffected();
   
-  virtual void PrintSeperatorGridLine() const;
-  virtual void PrintRowGridLine(INT) const;
-  
-  
+  virtual void PrintSeperatorGridLine(std::ostream&) const;
+  virtual void PrintRowGridLine(INT, std::ostream&) const;
 };
+
+template<UINT H, UINT W, UINT N>
+std::ostream& operator<<(std::ostream& s, const SudokuGrid<H, W, N>& g){
+  return g.DisplayGridString(s);
+}
 
 #endif /* SUDOKUSOLVER_GRID_HPP */
