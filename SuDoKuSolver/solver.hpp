@@ -27,8 +27,14 @@ enum class LogicOperation {
   HIDDEN_QUAD,
   NAKED_NUPLE,        // For larger grids
   HIDDEN_NUPLE,
+  INTERSECTION_REMOVAL,
   BRUTE_FORCE,         // Last resort
   NUM_OPERATIONS
+};
+
+enum class Action {
+  REMOVE,
+  COMPLETE,
 };
 
 template<UINT H, UINT W, UINT N>
@@ -55,7 +61,7 @@ private:
   ISudokuSolver() = default;
   
 public:
-  ISudokuSolver(SudokuGrid<H,W,N>& grid);
+  ISudokuSolver(SudokuGrid<H,W,N>&);
   virtual bool Solve() = 0;  // T/F if solved
   const GridState& GetSolvedState() { return _solved; }
 };
@@ -85,11 +91,12 @@ public:
   typedef std::bitset<N> AllCells;
   typedef std::array<std::bitset<H * W>, N> GridState;
   // Value to reset, Index to perform on, Action group
-  typedef std_x::triple<INT, INT, UINT> Actionable;
+  typedef std_x::triple<Action, UINT, UINT> Actionable;
   typedef std::pair<GridState, AllCells> SolveState;
+  typedef std_x::triple<const AllCells, UINT, UINT> Intersection;
   
 public:
-  using ISudokuSolver<H,W,N>::ISudokuSolver;
+  LogicalSolver(SudokuGrid<H,W,N>&);
   virtual bool Solve();
   const std::vector<LogicOperation>& LogicalOperations() { return _order; }
   
@@ -97,7 +104,8 @@ private:
   SolveState _solve_state;
   std::vector<LogicOperation> _order;
   std::vector<Actionable> _actions;
-  UINT _action_next, _action_group;
+  std::vector<Intersection> _intersects;
+  UINT _action_next;
   
 private:
   // Logic
@@ -106,6 +114,7 @@ private:
   bool HiddenSingle();
   bool NakedNuple(UINT);
   bool HiddenNuple(UINT);
+  bool GroupIntersection();
   bool BruteForce();
   
   // Useful utilities
