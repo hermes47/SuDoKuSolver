@@ -9,10 +9,10 @@
 #ifndef SUDOKUSOLVER_GRID_2X3_HPP
 #define SUDOKUSOLVER_GRID_2X3_HPP
 
-#include "grid_old.hpp"
+#include "grid.hpp"
 
-class Grid2x3 : public _SudokuGrid<2,3> {
-  using _SudokuGrid<2,3>::_SudokuGrid;
+class Grid2x3 : public SudokuGrid<2,3> {
+  using SudokuGrid<2,3>::SudokuGrid;
 public:
   
 };

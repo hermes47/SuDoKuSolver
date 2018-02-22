@@ -6,7 +6,7 @@
 #include <cstdint>
 
 typedef int32_t INT;
-typedef uint32_t UINT;
+typedef size_t UINT;
 typedef float FLT;
 
 // Bounds checking only when debug mode

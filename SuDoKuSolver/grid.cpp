@@ -12,13 +12,13 @@
 #include <string>
 
 #include "grid.hpp"
-#include "solver_new.hpp"
+#include "solver.hpp"
 
 // Default constructor creates all cells, then calls SetGroups and SetAffected
 // Any classes inheriting should call this constructor in initalisation list
-template<INT H, INT W, INT N>
+template<UINT H, UINT W, UINT N>
 SudokuGrid<H,W,N>::SudokuGrid() {
-  for (INT i = 0; i < N; ++i) _AT(_cells, i) = Cell(i);
+  for (UINT i = 0; i < N; ++i) _AT(_cells, i) = Cell(i);
   SetGroups();
   SetAffected();
 }
@@ -26,7 +26,7 @@ SudokuGrid<H,W,N>::SudokuGrid() {
 // Construct from a string. Can only handle up to 62 possible values
 // 1-9 are obvious, 0 is 10, A-Z is 11 to 36, a-z are 37 - 62.
 // . is treated as blank. Any other characters will throw
-template<INT H, INT W, INT N>
+template<UINT H, UINT W, UINT N>
 SudokuGrid<H,W,N>::SudokuGrid(const std::string& s)
 : SudokuGrid() {
   static_assert(G <= 62, "String construction can only handle 62 values");
@@ -45,7 +45,7 @@ SudokuGrid<H,W,N>::SudokuGrid(const std::string& s)
     GetCell(i).SetFixedValue(v);
     const AllCells& affect = GetAffected(i);
     for (INT j = 0; j < N; ++j) {
-      if (_AT(affect, j)) GetCell(j).ResetOption(v);
+      if (affect[j]) GetCell(j).ResetOption(v);
     }
   }
   
@@ -56,40 +56,95 @@ SudokuGrid<H,W,N>::SudokuGrid(const std::string& s)
   }
 }
 
-template<INT H, INT W, INT N>
+template<UINT H, UINT W, UINT N>
 const typename SudokuGrid<H,W,N>::GridState& SudokuGrid<H,W,N>::GetSolvedState() {
   // Set solved state
   if (_num_solutions < 0) {
-    UINT count;
-    SolveGridNew<H, W, N>(_initial, _grps, _affected, _solved, count, true, 2);
+    UINT count = 0;
+    BruteForceSolver<H,W,N> solver(*this);
+    if (solver.Solve()) {
+     ++count;
+      _solved = solver.GetSolvedState();
+    }
+//    SolveGridNew<H, W, N>(_initial, _grps, _affected, _solved, count, true, 2);
     _num_solutions = count;
   }
   return _solved;
 }
 
-// Set groups default method. Only works when N = H * W * H * W
-template<INT H, INT W, INT N>
-void SudokuGrid<H,W,N>::SetGroups() {
-  static_assert(N == G * G, "With non-regular sudokus, need to override SetGroups");
-  
-  // Fill the vector with the required number of groups (3G)
-  _grps.clear();
-  _grps.reserve(3 * G);
-  _grps.insert(_grps.begin(), 3 * G, AllCells(0));
-  
-  // Set all cell's row, column, block
-  for (Cell& cell : _cells) {
-    auto rcb = GetCellGroups<H, W, N>(cell.GetIndex());
-    cell.SetRow(rcb.first);
-    cell.SetColumn(rcb.second);
-    cell.SetBlock(rcb.third);
-    _AT(_grps, rcb.first).set(cell.GetIndex());
-    _AT(_grps, rcb.second + G).set(cell.GetIndex());
-    _AT(_grps, rcb.third + G * 2).set(cell.GetIndex());
-  }
+template<UINT H, UINT W, UINT N>
+bool SudokuGrid<H,W,N>::Solve() {
+  GetSolvedState();
+  if (_num_solutions != 1) return false;
+  SetState(_solved);
+  return true;
 }
 
-template<INT H, INT W, INT N>
+template <UINT H, UINT W, UINT N>
+bool SudokuGrid<H,W,N>::LogicalSolve() {
+  if (IsSolvable()) {
+    LogicalSolver<H,W,N> solver(*this);
+    return solver.Solve();
+  }
+  return false;
+}
+
+template<UINT H, UINT W, UINT N>
+bool SudokuGrid<H,W,N>::CheckCurrentState() const {
+  for (UINT i = 0; i < N; ++i) {
+    if (_AT(_cells, i).GetValue()
+        && _AT(_cells, i).GetPossibleValues() != _AT(_initial, i))
+      return false;
+  }
+  return true;
+}
+
+template<UINT H, UINT W, UINT N>
+bool SudokuGrid<H,W,N>::IsValid() const {
+  // State is valid if there are no same group clashes of values
+  for (const AllCells& group : _grps) {
+    UINT count = 0;
+    Values set(0);
+    UINT idx = __find_first<N>(group);
+    while (idx < N) {
+      const Cell& cell = _AT(_cells, idx);
+      if (cell.GetValue() && cell.GetValue() != N) {
+        ++count;
+        set |= cell.GetPossibleValues();
+      }
+      idx = __find_next<N>(group, idx);
+    }
+    if (set.count() != count) return false;
+  }
+  return true;
+}
+
+template<UINT H, UINT W, UINT N>
+bool SudokuGrid<H,W,N>::IsSolvable() {
+  GetSolvedState();
+  if (_num_solutions > 0) return true;
+  return false;
+}
+
+template<UINT H, UINT W, UINT N>
+bool SudokuGrid<H,W,N>::IsSolved() const {
+  if (!IsValid()) return false;
+  for (const Cell& cell : _cells) {
+    if (cell.GetValue() == 0 || cell.GetValue() == N) return false;
+  }
+  return true;
+}
+
+template<UINT H, UINT W, UINT N>
+typename SudokuGrid<H,W,N>::GridState SudokuGrid<H,W,N>::GetCurrentState() const {
+  GridState state;
+  for (const Cell& c: _cells) {
+    _AT(state, c.GetIndex()) = c.GetPossibleValues();
+  }
+  return state;
+}
+
+template<UINT H, UINT W, UINT N>
 void SudokuGrid<H,W,N>::SetAffected() {
   static_assert(N == G * G, "With non-regular sudokus, need to override SetAffected");
   for (Cell& cell : _cells) {
@@ -102,7 +157,7 @@ void SudokuGrid<H,W,N>::SetAffected() {
   }
 }
 
-template <INT H, INT W, INT N>
+template <UINT H, UINT W, UINT N>
 void SudokuGrid<H,W,N>::DisplayGrid() const {
   for (INT r = 0; r < G; ++r) {
     if (!(r % H)) PrintSeperatorGridLine();
@@ -111,7 +166,35 @@ void SudokuGrid<H,W,N>::DisplayGrid() const {
   PrintSeperatorGridLine();
 }
 
-template<INT H, INT W, INT N>
+template <UINT H, UINT W, UINT N>
+void SudokuGrid<H,W,N>::DisplayGridString() const {
+  for (const Cell& cell : _cells) {
+    INT v = cell.GetValue();
+    char o;
+    if (v == 0) o = '.';
+    else if (v >= 1 && v <= 9) o = '0' + v;
+    else if (v == 10) o = '0';
+    else if (v >= 11 && v <= 36) o = '6' + v;
+    else o = '<' + v;
+    std::cout << o;
+  }
+  std::cout << std::endl;
+}
+
+template <UINT H, UINT W, UINT N>
+bool SudokuGrid<H,W,N>::SetState(const GridState & state) {
+  // Check that the state doesn't alter clues
+  for (UINT i = 0; i < N; ++i) {
+    if (_AT(_cells, i).IsFixed() && _AT(state, i) != _AT(_initial, i))
+      return false;
+  }
+  
+  // Set state now
+  for (UINT i = 0; i < N; ++i) _AT(_cells, i).SetPossibleValues(_AT(state, i));
+  return true;
+}
+
+template<UINT H, UINT W, UINT N>
 void SudokuGrid<H,W,N>::PrintSeperatorGridLine() const {
   for (INT i = 0; i < G; ++i) {
     if (!(i % W)) std::cout << "+-";
@@ -120,7 +203,7 @@ void SudokuGrid<H,W,N>::PrintSeperatorGridLine() const {
   std::cout << "+" << std::endl;
 }
 
-template<INT H, INT W, INT N>
+template<UINT H, UINT W, UINT N>
 void SudokuGrid<H,W,N>::PrintRowGridLine(INT r) const {
   INT c = 0;
   const AllCells& row = GetRow(r);
@@ -141,11 +224,32 @@ void SudokuGrid<H,W,N>::PrintRowGridLine(INT r) const {
   std::cout << "|" << std::endl;
 }
 
+// Set groups default method. Only works when N = H * W * H * W
+template<UINT H, UINT W, UINT N>
+void SudokuGrid<H,W,N>::SetGroups() {
+  static_assert(N == G * G,
+                "With non-regular sudokus, need to override SetGroups");
+  
+  // Fill the vector with the required number of groups (3G)
+  _grps.clear();
+  _grps.reserve(3 * G);
+  _grps.insert(_grps.begin(), 3 * G, AllCells(0));
+  
+  // Set all cell's row, column, block
+  for (Cell& cell : _cells) {
+    auto rcb = GetCellGroups<H, W, N>(cell.GetIndex());
+    cell.SetRow(rcb.first);
+    cell.SetColumn(rcb.second);
+    cell.SetBlock(rcb.third);
+    _AT(_grps, rcb.first).set(cell.GetIndex());
+    _AT(_grps, rcb.second + G).set(cell.GetIndex());
+    _AT(_grps, rcb.third + G * 2).set(cell.GetIndex());
+  }
+}
+
 // Grid size init
 #define GRID_SIZE(x,y,z)\
 template class SudokuGrid<x,y,z>;
 
-GRID_SIZE(3,3,81);
-GRID_SIZE(2,2,16);
-//#include "gridsizes.itm"
+#include "gridsizes.itm"
 #undef GRID_SIZE

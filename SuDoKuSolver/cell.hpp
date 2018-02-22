@@ -16,9 +16,9 @@
 
 #include "utility.hpp"
 
-template <INT N>
+template <UINT N>
 class SudokuCell {
-  typedef std_x::bitset<N> Values;
+  typedef std::bitset<N> Values;
   
   Values _values, _initial;
   INT _row, _col, _blk, _idx;
@@ -84,6 +84,7 @@ public:
   inline void SetOption(INT p) {  if (!_clue) _values.set(p - 1); }
   inline void ResetOption(INT p) {  if (!_clue) _values.reset(p - 1); }
   inline Values GetPossibleValues() const { return _values; }
+  inline void SetPossibleValues(const Values& v) { _values = v; }
   inline bool IsPossibleValue(INT i) const { return _AT(_values, i); }
   inline INT NumOptions() const { return (INT)_values.count(); }
   inline void Reset() { _values = _initial; }
@@ -99,31 +100,31 @@ public:
 };
 
 // Comparison operators
-template <INT N>
+template <UINT N>
 inline bool operator==(SudokuCell<N>& l, SudokuCell<N>& r) {
   return l.GetIndex() == r.GetIndex();
 }
 
-template <INT N>
+template <UINT N>
 inline bool operator!=(SudokuCell<N>& l, SudokuCell<N>& r) {
   return l.GetIndex() != r.GetIndex();
 }
 
-template <INT N>
+template <UINT N>
 inline bool operator<(SudokuCell<N>& l, SudokuCell<N>& r) {
   return l.GetIndex() < r.GetIndex();
 }
 
-template <INT N>
+template <UINT N>
 inline bool operator>(SudokuCell<N>& l, SudokuCell<N>& r) {
   return l.GetIndex() > r.GetIndex();
 }
-template <INT N>
+template <UINT N>
 inline bool operator<=(SudokuCell<N>& l, SudokuCell<N>& r) {
   return l.GetIndex() <= r.GetIndex();
 }
 
-template <INT N>
+template <UINT N>
 inline bool operator>=(SudokuCell<N>& l, SudokuCell<N>& r) {
   return l.GetIndex() >= r.GetIndex();
 }

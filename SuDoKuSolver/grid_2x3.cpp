@@ -7,14 +7,14 @@
 //
 
 #include "grid_2x3.hpp"
-#include "logical_solver.hpp"
 #include "solver.hpp"
 
 bool SolveGrid(Grid2x3& grid) {
-  return SolveGrid<2,3>(grid);
+  BruteForceSolver<2,3> solve(grid);
+  return solve.Solve();
 }
 
 bool LogicallySolveGrid(Grid2x3& grid) {
-  LogicalSolver<2, 3> solver(grid);
-  return solver.PerformLogicalSolving();
+  LogicalSolver<2,3> solver(grid);
+  return solver.Solve();
 }

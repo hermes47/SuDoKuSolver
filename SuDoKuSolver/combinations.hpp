@@ -22,7 +22,8 @@ class Combinations {
   bool _is_done;
   
 public:
-  Combinations(iterator_t begin, iterator_t end, uint64_t r) : _begin(begin), _end(end) , _r(r), _is_done(false)
+  Combinations(iterator_t begin, iterator_t end, uint64_t r)
+  : _begin(begin), _end(end) , _r(r), _is_done(false)
   {
     _use.resize(std::distance(_begin, _end), false);
     if (_use.size() >= _r) std::fill(_use.end() - _r, _use.end(), true);

@@ -1,80 +1,118 @@
 //
-//  solver.hpp
+//  solver_new.hpp
 //  SuDoKuSolver
 //
-//  Created by Ivan Welsh on 17/02/18.
+//  Created by Ivan Welsh on 21/02/18.
 //  Copyright © 2018 Hermes Productions. All rights reserved.
 //
 
-#ifndef SUDOKUSOLVER_SOLVER_HPP
-#define SUDOKUSOLVER_SOLVER_HPP
+#ifndef SUDOKUSOLVER_BRUTEFORCE_SOLVER_HPP
+#define SUDOKUSOLVER_BRUTEFORCE_SOLVER_HPP
 
-#include <cstdint>
+#include "defines.hpp"
 
-#include "grid_old.hpp"
+#include <array>
+#include <vector>
 
-template <dimension_t Height, dimension_t Width>
-bool SolveGrid(_SudokuGrid<Height,Width>& grid, bool quiet, size_t max_solutions) {
-  static const values_t num_vals = Height * Width;
-  static const work_t num_cells = num_vals * num_vals;
-  typedef _SudokuCell<num_vals> Cell;
-  typedef std::array<values_t, num_cells> GridState;
-  typedef std::bitset<num_vals> Possibles;
+#include "utility.hpp"
+
+enum class LogicOperation {
+  NAKED_SINGLE,
+  HIDDEN_SINGLE,
+  NAKED_PAIR,
+  HIDDEN_PAIR,
+  NAKED_TRIPLE,
+  HIDDEN_TRIPLE,
+  NAKED_QUAD,
+  HIDDEN_QUAD,
+  NAKED_NUPLE,        // For larger grids
+  HIDDEN_NUPLE,
+  BRUTE_FORCE,         // Last resort
+  NUM_OPERATIONS
+};
+
+template<UINT H, UINT W, UINT N>
+class SudokuGrid;
+
+template <UINT H, UINT W, UINT N>
+class ISudokuSolver {
+protected:
+  static const UINT G = H * W;
+public:
+  typedef std::bitset<H * W> Values;
+  typedef std::bitset<N> AllCells;
+  typedef std::array<std::bitset<G>, N> GridState;
   
-  GridState current;
-  grid.GetState(current);
+protected:
+  SudokuGrid<H,W,N>& _grid;
+  const GridState _initial;
+  GridState _solved;
+  const std::vector<AllCells> _groups;
+  const std::array<AllCells, N> _affected;
+  bool _quiet;
   
-  std::vector<GridState> to_run;
-  to_run.push_back(current);
-  size_t count = 0, solutions = 0;
-  while (to_run.size()) {
-    GridState state = to_run.back();
-    to_run.pop_back();
-    grid.SetState(state);
-    ++count;
-    
-    // Check validity and if solved
-    if (!grid.IsValidState()) continue;
-    if (grid.IsSolved()) {
-      ++solutions;
-      grid._solved = GridState(state);
-      continue;
-    }
-    if (solutions >= max_solutions) break;
-    
-    // Find smallest optioned cell
-    values_t smallCell = num_cells;
-    for (values_t cell = 0; cell < grid._cells.size(); ++cell) {
-      if (grid._cells[cell].GetValue()) continue;
-      if (smallCell == num_cells) smallCell = cell;
-      if (grid._cells[cell].NumOptions() == 1) {  // Never gonna get smaller options
-        smallCell = cell;
-        break;
-      } else if (grid._cells[cell].NumOptions() < grid._cells[smallCell].NumOptions()) smallCell = cell;
-    }
-    
-    // Branch on all the options
-    Possibles options = grid._cells[smallCell].GetPossibleOptions();
-    for (values_t i = 0; i < options.size(); ++i) {
-      if (!options[i]) continue;
-      GridState newState;
-      std::copy(state.begin(), state.end(), newState.begin());
-      newState.at(smallCell) = i + 1;
-      to_run.push_back(newState);
-    }
-  }
+private:
+  ISudokuSolver() = default;
   
-  if (!quiet) {
-    if (!solutions) std::cout << "No valid solution found (" << count << " iterations)." << std::endl;
-    else {
-      grid.SetState(grid._solved);
-      std::cout << "Solution found (" << count << " iterations) : " << std::endl;
-//      grid.DisplayGrid();
-    }
-  }
-  grid.SetState(current);
-  grid._num_solutions = solutions;
-  return solutions;
-}
+public:
+  ISudokuSolver(SudokuGrid<H,W,N>& grid);
+  virtual bool Solve() = 0;  // T/F if solved
+  const GridState& GetSolvedState() { return _solved; }
+};
 
-#endif /* SUDOKUSOLVER_SOLVER_HPP */
+template <UINT H, UINT W = H, UINT N = H * H * W * W>
+class BruteForceSolver : public ISudokuSolver<H,W,N> {
+//  static const INT G = H * W;
+public:
+  typedef std::bitset<H * W> Values;
+  typedef std::bitset<N> AllCells;
+  typedef std::array<std::bitset<H * W>, N> GridState;
+  
+public:
+  using ISudokuSolver<H,W,N>::ISudokuSolver;
+  virtual bool Solve();
+  
+private:
+  UINT _max, _count;
+};
+
+
+template <UINT H, UINT W = H, UINT N = H * H * W * W>
+class LogicalSolver : public ISudokuSolver<H,W,N> {
+  //  static const INT G = H * W;
+public:
+  typedef std::bitset<H * W> Values;
+  typedef std::bitset<N> AllCells;
+  typedef std::array<std::bitset<H * W>, N> GridState;
+  // Value to reset, Index to perform on, Action group
+  typedef std_x::triple<INT, INT, UINT> Actionable;
+  typedef std::pair<GridState, AllCells> SolveState;
+  
+public:
+  using ISudokuSolver<H,W,N>::ISudokuSolver;
+  virtual bool Solve();
+  const std::vector<LogicOperation>& LogicalOperations() { return _order; }
+  
+private:
+  SolveState _solve_state;
+  std::vector<LogicOperation> _order;
+  std::vector<Actionable> _actions;
+  UINT _action_next, _action_group;
+  
+private:
+  // Logic
+  void HandleActions();
+  bool NakedSingle();
+  bool HiddenSingle();
+  bool NakedNuple(UINT);
+  bool HiddenNuple(UINT);
+  bool BruteForce();
+  
+  // Useful utilities
+  void SetSingleValue(UINT, UINT);
+  
+  
+};
+
+
+#endif /* SUDOKUSOLVER_BRUTEFORCE_SOLVER_HPP */
