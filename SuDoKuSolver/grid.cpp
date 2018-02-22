@@ -122,7 +122,7 @@ bool SudokuGrid<H,W,N>::IsValid() const {
 template<UINT H, UINT W, UINT N>
 bool SudokuGrid<H,W,N>::IsSolvable() {
   GetSolvedState();
-  if (_num_solutions > 0) return true;
+  if (_num_solutions == 1) return true;
   return false;
 }
 

@@ -30,13 +30,14 @@ bool BruteForceSolver<H,W,N>::Solve() {
   
   std::vector<SolveState> to_run;
   AllCells to_solve(0);
-  for (INT i = 0; i < N; ++i) {
-    if (_AT(this->_initial, i).count() > 1) to_solve.set(i);
+  for (UINT i = 0; i < N; ++i) {
+    if (!this->_grid.GetCell(i).IsFixed()) to_solve.set(i);
   }
   to_run.emplace_back(this->_initial, to_solve);
   
   UINT iters = 0;
   _count = 0;
+  _max = 2;
   
   while (to_run.size()) {
     SolveState s = to_run.back();
@@ -45,51 +46,50 @@ bool BruteForceSolver<H,W,N>::Solve() {
     
     // Check all to be solved cells have potential bits set
     // At the same time, find the cell with the least amount of options
-    UINT pos = __find_first<N>(s.second), best = N;
+    UINT pos = __find_first(s.second), best = s.second.size();
     // Check if solved
-    if (pos == N) {
+    if (pos == s.second.size()) {
       ++_count;
       this->_solved = s.first;
-      if (_count >= _max) break;  // bail out
+      if (_count == _max) break;  // bail out
       continue;
     }
     
     bool valid = true;
-    while (pos < N) {
+    while (pos < s.second.size()) {
       if (_AT(s.first, pos).none()) {
         valid = false;
         break;
       }
-      if (best == N) best = pos;
+      if (best == s.second.size()) best = pos;
       if (_AT(s.first, pos).count() < _AT(s.first, best).count()) best = pos;
-      pos = __find_next<N>(s.second, pos);
+      pos = __find_next(s.second, pos);
     }
-    
     if (!valid) continue;
     
+    
+    
     // Branch on all options available to cell
-    UINT val = __find_first<H * W>(_AT(s.first, best));
-    to_solve = s.second;
-    to_solve.reset(best);
-    while (val < H * W) {
+    UINT val = __find_first(_AT(s.first, best));
+    while (val < _AT(s.first, best).size()) {
       GridState newState;
-      AllCells new_tosolve(to_solve);
+      AllCells new_tosolve(s.second);
+      new_tosolve.reset(best);
       std::copy(s.first.begin(), s.first.end(), newState.begin());
       _AT(newState, best).reset();
       _AT(newState, best).set(val);
       // Propagate the setting (should only affect cells to solve still)
       const AllCells& a = _AT(this->_affected, best);
-      UINT a_pos = __find_first<N>(a);
-      while (a_pos < N) {
-        _AT(newState, a_pos).reset(val);
-        a_pos = __find_next<N>(a, a_pos);
+      UINT a_pos = __find_first(a);
+      while (a_pos < new_tosolve.size()) {
+        if (new_tosolve[a_pos]) _AT(newState, a_pos).reset(val);
+        a_pos = __find_next(a, a_pos);
       }
       
       to_run.emplace_back(newState, new_tosolve);
-      val = __find_next<H * W>(_AT(s.first, best), val);
+      val = __find_next(_AT(s.first, best), val);
     }
   }
-  
   return _count == 1;
 }
 
