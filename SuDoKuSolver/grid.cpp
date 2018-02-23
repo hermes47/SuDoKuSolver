@@ -67,7 +67,7 @@ const typename SudokuGrid<H,W,N>::GridState& SudokuGrid<H,W,N>::GetSolvedState()
       _solved = solver.GetSolvedState();
     }
 //    SolveGridNew<H, W, N>(_initial, _grps, _affected, _solved, count, true, 2);
-    _num_solutions = count;
+    _num_solutions = (INT)count;
   }
   return _solved;
 }
@@ -170,7 +170,7 @@ std::ostream& SudokuGrid<H,W,N>::DisplayGrid(std::ostream& s) const {
 template <UINT H, UINT W, UINT N>
 std::ostream& SudokuGrid<H,W,N>::DisplayGridString(std::ostream& s) const {
   for (const Cell& cell : _cells) {
-    INT v = cell.GetValue();
+    UINT v = cell.GetValue();
     char o;
     if (cell.NumOptions() == 0) o = '+';
     else if (v == 0) o = '.';
@@ -206,13 +206,13 @@ void SudokuGrid<H,W,N>::PrintSeperatorGridLine(std::ostream& s) const {
 }
 
 template<UINT H, UINT W, UINT N>
-void SudokuGrid<H,W,N>::PrintRowGridLine(INT r, std::ostream& s) const {
-  INT c = 0;
+void SudokuGrid<H,W,N>::PrintRowGridLine(UINT r, std::ostream& s) const {
+  UINT c = 0;
   const AllCells& row = GetRow(r);
-  for (INT i = 0; i < N; ++i) {
+  for (UINT i = 0; i < N; ++i) {
     if (!row[i]) continue;
     if (!(c % W)) s << "| ";
-    INT v = GetCell(i).GetValue();
+    UINT v = GetCell(i).GetValue();
     // Convert value to char
     char o;
     if (v == 0) o = '.';

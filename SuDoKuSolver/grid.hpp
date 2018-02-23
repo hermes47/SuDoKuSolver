@@ -68,17 +68,17 @@ public:
 //  SudokuGrid& operator=(SudokuGrid&&);
   
   // Get a cell by index. Only do bounds checking in when DEBUG defined
-  inline Cell& GetCell(INT i) { return _AT(_cells, i); }
-  inline const Cell& GetCell(INT i) const { return _AT(_cells, i); }
-  inline const AllCells& GetGroup(INT i) const { return _AT(_grps, i); }
-  inline virtual const AllCells& GetRow(INT i) const { return GetGroup(i); }
-  inline virtual const AllCells& GetColumn(INT i) const { return GetGroup(i+G); }
-  inline virtual const AllCells& GetBlock(INT i) const { return GetGroup(i+G+G); }
+  inline Cell& GetCell(UINT i) { return _AT(_cells, i); }
+  inline const Cell& GetCell(UINT i) const { return _AT(_cells, i); }
+  inline const AllCells& GetGroup(UINT i) const { return _AT(_grps, i); }
+  inline virtual const AllCells& GetRow(UINT i) const { return GetGroup(i); }
+  inline virtual const AllCells& GetColumn(UINT i) const { return GetGroup(i+G); }
+  inline virtual const AllCells& GetBlock(UINT i) const { return GetGroup(i+G+G); }
   inline const std::vector<AllCells>& GetAllGroups() const { return _grps; }
   inline const std::array<AllCells, N>& GetAllAffected() const { return _affected; }
   
   // Get the set of cells affected by a given cell being set
-  inline const AllCells& GetAffected(INT i) const { return _AT(_affected,i); }
+  inline const AllCells& GetAffected(UINT i) const { return _AT(_affected,i); }
   inline const AllCells& GetAffected(const Cell& c) const { return _AT(_affected,c.GetIndex()); }
   
   // Display the grid
@@ -106,11 +106,11 @@ private:
   virtual void SetAffected();
   
   virtual void PrintSeperatorGridLine(std::ostream&) const;
-  virtual void PrintRowGridLine(INT, std::ostream&) const;
+  virtual void PrintRowGridLine(UINT, std::ostream&) const;
 };
 
 template<UINT H, UINT W, UINT N>
-std::ostream& operator<<(std::ostream& s, const SudokuGrid<H, W, N>& g){
+inline std::ostream& operator<<(std::ostream& s, const SudokuGrid<H, W, N>& g){
   return g.DisplayGridString(s);
 }
 

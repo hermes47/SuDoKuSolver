@@ -21,22 +21,22 @@ class SudokuCell {
   typedef std::bitset<N> Values;
   
   Values _values, _initial;
-  INT _row, _col, _blk, _idx;
+  UINT _row, _col, _blk, _idx;
   bool _clue;
   
 public:
   // Default constructor
   SudokuCell()
-  : _row(-1), _col(-1), _blk(-1), _idx(-1), _clue(false) { _values.set(); }
+  : _row(0), _col(0), _blk(0), _idx(0), _clue(false) { _values.set(); }
   
   // Construct cell with given index
-  SudokuCell(INT i)
-  : _row(-1), _col(-1), _blk(-1), _idx(i), _clue(false) { _values.set(); }
+  SudokuCell(UINT i)
+  : _row(0), _col(0), _blk(0), _idx(i), _clue(false) { _values.set(); }
   
   // Construct cell with given index and value. Calling grid is responsible
   // for propagation of value effect
-  SudokuCell(INT i, INT v)
-  : _row(-1), _col(-1), _blk(-1), _idx(i), _clue(false) {
+  SudokuCell(UINT i, UINT v)
+  : _row(0), _col(0), _blk(0), _idx(i), _clue(false) {
     _values.reset();
     _values.set(v);
   }
@@ -63,39 +63,39 @@ public:
     return *this;
   }
   
-  inline INT GetValue() const {
-    return _values.count() > 1 ? 0 : __find_first<N>(_values) + 1;
+  inline UINT GetValue() const {
+    return _values.count() > 1 ? 0 : __find_first(_values) + 1;
   }
   
-  inline void SetValue(INT v) {
+  inline void SetValue(UINT v) {
     // Grid is responsible for propagating this set through to affected cells
     if (_clue) return;
     _values.reset();
     _values.set(v - 1);
   }
   
-  inline void SetFixedValue(INT v) {
+  inline void SetFixedValue(UINT v) {
     SetValue(v);
     _clue = true;
   }
   
   inline bool IsFixed() const { return _clue; }
-  inline void ToggleOption(INT p) { if (!_clue) _values.flip(p - 1); }
-  inline void SetOption(INT p) {  if (!_clue) _values.set(p - 1); }
-  inline void ResetOption(INT p) {  if (!_clue) _values.reset(p - 1); }
+  inline void ToggleOption(UINT p) { if (!_clue) _values.flip(p - 1); }
+  inline void SetOption(UINT p) {  if (!_clue) _values.set(p - 1); }
+  inline void ResetOption(UINT p) {  if (!_clue) _values.reset(p - 1); }
   inline Values GetPossibleValues() const { return _values; }
   inline void SetPossibleValues(const Values& v) { _values = v; }
-  inline bool IsPossibleValue(INT i) const { return _AT(_values, i); }
-  inline INT NumOptions() const { return (INT)_values.count(); }
+  inline bool IsPossibleValue(UINT i) const { return _AT(_values, i); }
+  inline UINT NumOptions() const { return _values.count(); }
   inline void Reset() { _values = _initial; }
-  inline INT GetRow() const { return _row; }
-  inline INT GetColumn() const { return _col; }
-  inline INT GetBlock() const { return _blk; }
-  inline INT GetIndex() const { return _idx; }
-  inline void SetRow(INT r) { _row = r; }
-  inline void SetColumn(INT r) { _col = r; }
-  inline void SetBlock(INT r) { _blk = r; }
-  inline void SetIndex(INT i) { _idx = i; }
+  inline UINT GetRow() const { return _row; }
+  inline UINT GetColumn() const { return _col; }
+  inline UINT GetBlock() const { return _blk; }
+  inline UINT GetIndex() const { return _idx; }
+  inline void SetRow(UINT r) { _row = r; }
+  inline void SetColumn(UINT r) { _col = r; }
+  inline void SetBlock(UINT r) { _blk = r; }
+  inline void SetIndex(UINT i) { _idx = i; }
   inline void SetCurrentAsInitial() { _initial = _values; }
 };
 
