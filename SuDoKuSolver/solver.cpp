@@ -8,6 +8,7 @@
 
 #include "defines.hpp"
 #include <iostream>
+#include <list>
 #include <vector>
 
 #include "combinations.hpp"
@@ -190,6 +191,7 @@ bool LogicalSolver<H,W,N>::Solve() {
     if (success) continue;
     
     if (GroupIntersection()) continue;
+    if (PatternOverlay()) continue;
     
     // Logic exhausted, so run brute force and exit if that fails
     if (BruteForce()) continue;
@@ -404,6 +406,113 @@ bool LogicalSolver<H,W,N>::GroupIntersection() {
   }
   if (_actions.size() > _action_next) {
     _order.push_back(LogicOperation::INTERSECTION_REMOVAL);
+    return true;
+  }
+  return false;
+}
+
+template <UINT H, UINT W, UINT N>
+bool LogicalSolver<H,W,N>::PatternOverlay() {
+  std::array<AllCells, G> val_masks;
+  std::array<std::list<AllCells>, G> patterns;
+  for (UINT val = 0; val < G; ++val) {
+    // Determine all cells that can contain val
+    _AT(val_masks, val) = AllCells(0);
+    for (UINT cell = 0; cell < _solve_state.first.size(); ++cell) {
+      if (_AT(_solve_state.first, cell)[val]) _AT(val_masks, val).set(cell);
+    }
+    
+    // Generate all valid masks for val
+    std::vector<std::pair<AllCells,UINT>> partials;
+    partials.emplace_back(_AT(val_masks, val), 0);
+    while (partials.size()) {
+      std::pair<AllCells, UINT> current = partials.back();
+      partials.pop_back();
+      
+      if (current.second == G) {
+        _AT(patterns, val).emplace_back(current.first);
+        continue;
+      }
+      
+      AllCells possibles = current.first & _AT(this->_groups, current.second);
+      if (possibles.none()) continue;
+      
+      FORBITSIN(pos, possibles) {
+        AllCells new_partial(current.first);
+        FORBITSIN(remove, _AT(this->_affected, pos)) new_partial.reset(remove);
+        partials.emplace_back(new_partial, current.second + 1);
+      }
+    }
+  }
+  
+  // RULE 1: if no patterns use a particular cell, can remove val from that cell
+  for (UINT val = 0; val < G; ++val) {
+    AllCells used(0);
+    for (AllCells& pattern : _AT(patterns, val)) used |= pattern;
+    AllCells not_used = _AT(val_masks, val) & ~used;
+    if (not_used.none()) continue;
+    FORBITSIN(cell, not_used) _actions.emplace_back(Action::REMOVE, val, cell);
+  }
+  
+  if (_actions.size() > _action_next) {
+    _order.push_back(LogicOperation::PATTERN_OVERLAY);
+    return true;
+  }
+  
+  // RULE 2:
+  // Determine all the subsets of cells which cover all patterns for each val
+  std::array<std::vector<AllCells>, G> coverage;
+  for (UINT val = 0; val < G; ++val) {
+    std::vector<std::pair<AllCells, UINT>> partials;
+    partials.emplace_back(_AT(val_masks, val) & _solve_state.second, 0);
+    
+    while (partials.size()) {
+      std::pair<AllCells, UINT> current = partials.back();
+      partials.pop_back();
+      if (current.first.none()) continue;
+      
+      if (current.second == G) {
+        bool all_coverage = true;
+        //        if (current.first.count() != 2) continue;
+        for (AllCells& pattern : _AT(patterns, val)) {
+          if ((pattern & current.first).none()) {
+            all_coverage = false;
+            break;
+          }
+        }
+        if (all_coverage) _AT(coverage, val).emplace_back(current.first);
+        continue;
+      }
+      
+      AllCells group = current.first & _AT(this->_groups, current.second);
+      partials.emplace_back(current.first & ~group, current.second + 1);
+      FORBITSIN(cell, group)
+      partials.emplace_back(current.first & ~_AT(this->_affected, cell),
+                            current.second + 1);
+    }
+  }
+  // Filter patterns if they contain values in all cells of a coverage mask
+  // of a different value
+  for (UINT coverage_idx = 0; coverage_idx < G; ++coverage_idx) {
+    for (UINT pattern_idx = 0; pattern_idx < G; ++pattern_idx) {
+      if (coverage_idx == pattern_idx) continue;
+      for (AllCells& cover : _AT(coverage, coverage_idx)) {
+        _AT(patterns, pattern_idx).remove_if([&cover](AllCells& pattern){
+          return (pattern & cover).count() == cover.count();
+        });
+      }
+    }
+  }
+  // Look again at rule 1 with filtered patterns
+  for (UINT val = 0; val < G; ++val) {
+    AllCells used(0);
+    for (AllCells& pattern : _AT(patterns, val)) used |= pattern;
+    AllCells not_used = _AT(val_masks, val) & ~used;
+    if (not_used.none()) continue;
+    FORBITSIN(cell, not_used) _actions.emplace_back(Action::REMOVE, val, cell);
+  }
+  if (_actions.size() > _action_next) {
+    _order.push_back(LogicOperation::PATTERN_OVERLAY);
     return true;
   }
   return false;

@@ -28,6 +28,7 @@ enum class LogicOperation {
   NAKED_NUPLE,        // For larger grids
   HIDDEN_NUPLE,
   INTERSECTION_REMOVAL,
+  PATTERN_OVERLAY,
   BRUTE_FORCE,         // Last resort
   NUM_OPERATIONS
 };
@@ -86,11 +87,11 @@ private:
 
 template <UINT H, UINT W = H, UINT N = H * H * W * W>
 class LogicalSolver : public ISudokuSolver<H,W,N> {
-  //  static const INT G = H * W;
+    static const UINT G = H * W;
 public:
-  typedef std::bitset<H * W> Values;
+  typedef std::bitset<G> Values;
   typedef std::bitset<N> AllCells;
-  typedef std::array<std::bitset<H * W>, N> GridState;
+  typedef std::array<std::bitset<G>, N> GridState;
   // Value to reset, Index to perform on, Action group
   typedef std_x::triple<Action, UINT, UINT> Actionable;
   typedef std::pair<GridState, AllCells> SolveState;
@@ -116,6 +117,7 @@ private:
   bool NakedNuple(UINT);
   bool HiddenNuple(UINT);
   bool GroupIntersection();
+  bool PatternOverlay();
   bool BruteForce();
   
   // Useful utilities
