@@ -105,14 +105,12 @@ bool SudokuGrid<H,W,N>::IsValid() const {
   for (const AllCells& group : _grps) {
     UINT count = 0;
     Values set(0);
-    UINT idx = __find_first<N>(group);
-    while (idx < N) {
+    FORBITSIN(idx, group) {
       const Cell& cell = _AT(_cells, idx);
       if (cell.GetValue() && cell.GetValue() != N) {
         ++count;
         set |= cell.GetPossibleValues();
       }
-      idx = __find_next<N>(group, idx);
     }
     if (set.count() != count) return false;
   }

@@ -46,48 +46,88 @@ bool BruteForceSolver<H,W,N>::Solve() {
     
     // Check all to be solved cells have potential bits set
     // At the same time, find the cell with the least amount of options
-    UINT pos = __find_first(s.second), best = s.second.size();
+    UINT best_cell = s.second.size(), cell_count = _AT(s.first,0).size();
+    bool valid = true;
+    FORBITSIN(pos, s.second) {
+      if (_AT(s.first, pos).none()) {
+        valid = false;
+        break;
+      }
+      if (best_cell == s.second.size()) best_cell = pos;
+      if (_AT(s.first, pos).count() < cell_count) {
+        best_cell = pos;
+        cell_count = _AT(s.first, pos).count();
+      }
+    }
+    if (!valid) continue;
     // Check if solved
-    if (pos == s.second.size()) {
+    if (best_cell == s.second.size()) {
       ++_count;
       this->_solved = s.first;
       if (_count == _max) break;  // bail out
       continue;
     }
     
-    bool valid = true;
-    while (pos < s.second.size()) {
-      if (_AT(s.first, pos).none()) {
-        valid = false;
-        break;
+    // Search for hidden sets smaller than current best.
+    UINT best_group = this->_groups.size(), group_count = _AT(s.first,0).size();
+    UINT group_val = _AT(s.first,0).size();
+    if (cell_count > 1) {
+      // Only perform the search if we're likely to exceed what's present
+      for (UINT g = 0; g < this->_groups.size(); ++g) {
+        AllCells group = _AT(this->_groups, g) & s.second;  // Only cells to solve
+        if (group.none()) continue;
+        // Get the counts of values can place in group
+        std::array<UINT, _AT(s.first,0).size()> counts = {0};
+        FORBITSIN(g_idx, group) {
+          FORBITSIN(i_val, _AT(s.first, g_idx)) ++counts[i_val];
+        }
+        
+        // If a val count is less than current group_count, change it
+        for (UINT i = 0; i < counts.size(); ++i) {
+          if (_AT(counts, i) < group_count && _AT(counts, i) != 0) {
+            group_count = _AT(counts, i);
+            group_val = i;
+            best_group = g;
+          }
+        }
+        if (group_count == 1) break;
       }
-      if (best == s.second.size()) best = pos;
-      if (_AT(s.first, pos).count() < _AT(s.first, best).count()) best = pos;
-      pos = __find_next(s.second, pos);
     }
-    if (!valid) continue;
     
-    
-    
-    // Branch on all options available to cell
-    UINT val = __find_first(_AT(s.first, best));
-    while (val < _AT(s.first, best).size()) {
-      GridState newState;
-      AllCells new_tosolve(s.second);
-      new_tosolve.reset(best);
-      std::copy(s.first.begin(), s.first.end(), newState.begin());
-      _AT(newState, best).reset();
-      _AT(newState, best).set(val);
-      // Propagate the setting (should only affect cells to solve still)
-      const AllCells& a = _AT(this->_affected, best);
-      UINT a_pos = __find_first(a);
-      while (a_pos < new_tosolve.size()) {
-        if (new_tosolve[a_pos]) _AT(newState, a_pos).reset(val);
-        a_pos = __find_next(a, a_pos);
+    if (cell_count <= group_count) {
+      // Branch on all options available to cell
+      FORBITSIN(val, _AT(s.first, best_cell)) {
+        GridState newState;
+        AllCells new_tosolve(s.second);
+        new_tosolve.reset(best_cell);
+        std::copy(s.first.begin(), s.first.end(), newState.begin());
+        _AT(newState, best_cell).reset();
+        _AT(newState, best_cell).set(val);
+        // Propagate the setting (should only affect cells to solve still)
+        const AllCells& a = _AT(this->_affected, best_cell);
+        FORBITSIN(a_pos, a) {
+          if (new_tosolve[a_pos]) _AT(newState, a_pos).reset(val);
+        }
+        to_run.emplace_back(newState, new_tosolve);
       }
-      
-      to_run.emplace_back(newState, new_tosolve);
-      val = __find_next(_AT(s.first, best), val);
+    } else {
+      // Branch on group_val in all posible places in group
+      AllCells group = _AT(this->_groups, best_group) & s.second;  // Only cells to solve
+      FORBITSIN(cell, group) {
+        if (!_AT(s.first, cell)[group_val]) continue;
+        GridState newState;
+        AllCells new_tosolve(s.second);
+        new_tosolve.reset(cell);
+        std::copy(s.first.begin(), s.first.end(), newState.begin());
+        _AT(newState, cell).reset();
+        _AT(newState, cell).set(group_val);
+        // Propagate the setting (should only affect cells to solve still)
+        const AllCells& a = _AT(this->_affected, cell);
+        FORBITSIN(a_pos, a) {
+          if (new_tosolve[a_pos]) _AT(newState, a_pos).reset(group_val);
+        }
+        to_run.emplace_back(newState, new_tosolve);
+      }
     }
   }
   return _count == 1;
@@ -120,6 +160,8 @@ bool LogicalSolver<H,W,N>::Solve() {
   while (true) {
     // Handle actions decided last round
     HandleActions();
+//    this->_grid.SetState(_solve_state.first);
+//    std::cout << this->_grid << std::endl;
     if (_solve_state.second.none()) break;
     
     // Search for singles
@@ -169,13 +211,11 @@ void LogicalSolver<H,W,N>::HandleActions() {
 
 template <UINT H, UINT W, UINT N>
 bool LogicalSolver<H,W,N>::NakedSingle() {
-  UINT idx = __find_first<N>(_solve_state.second);
-  while (idx < N) {
+  FORBITSIN(idx, _solve_state.second) {
     if (_AT(_solve_state.first, idx).count() == 1) {
-      UINT val = __find_first<H * W>(_AT(_solve_state.first, idx));
+      UINT val = __find_first(_AT(_solve_state.first, idx));
       SetSingleValue(val, idx);
     }
-    idx = __find_next<N>(_solve_state.second, idx);
   }
   if (_actions.size() > _action_next) {
     _order.push_back(LogicOperation::NAKED_SINGLE);
@@ -187,24 +227,18 @@ bool LogicalSolver<H,W,N>::NakedSingle() {
 template <UINT H, UINT W, UINT N>
 bool LogicalSolver<H,W,N>::HiddenSingle() {
   for (const AllCells& group : this->_groups) {
-    UINT ga_idx = __find_first<N>(group);
-    while (ga_idx < N) {
+    FORBITSIN(ga_idx, group) {
       Values options = _AT(_solve_state.first, ga_idx);
-      UINT gb_idx = __find_first<N>(group);
-      while (gb_idx < N) {
+      FORBITSIN(gb_idx, group) {
         if (gb_idx != ga_idx) options &= (~_AT(_solve_state.first, gb_idx));
-        gb_idx = __find_next<N>(group, gb_idx);
       }
       
       if (options.count() == 1) {
-        UINT val = __find_first<H * W>(options);
-        UINT remove = __find_first<H * W>(_AT(_solve_state.first, ga_idx));
-        while (remove < H*W) {
+        UINT val = __find_first(options);
+        FORBITSIN(remove, _AT(_solve_state.first, ga_idx)) {
           if (remove != val) _actions.emplace_back(Action::REMOVE, remove, ga_idx);
-          remove = __find_next<H * W>(_AT(_solve_state.first, ga_idx), remove);
         }
       }
-      ga_idx = __find_next<N>(group, ga_idx);
     }
   }
   
@@ -220,10 +254,8 @@ bool LogicalSolver<H,W,N>::NakedNuple(UINT nuple) {
   for (const AllCells& group : this->_groups) {
     // Find all unsets (ie still to solve) in group
     std::vector<UINT> valids, combination, complement;
-    UINT g_idx = __find_first<N>(group);
-    while (g_idx < N) {
+    FORBITSIN(g_idx, group) {
       if (_solve_state.second[g_idx]) valids.emplace_back(g_idx);
-      g_idx = __find_next<N>(group, g_idx);
     }
     
     // Iterate over all nuple length combinations of valids
@@ -244,11 +276,8 @@ bool LogicalSolver<H,W,N>::NakedNuple(UINT nuple) {
           for (UINT idx : complement) {
             intersect = _AT(_solve_state.first, idx) & combo_options;
             if (intersect.none()) continue;
-            UINT remove = __find_first(intersect);
-            while (remove < intersect.size()) {
+            FORBITSIN(remove, intersect)
               _actions.emplace_back(Action::REMOVE, remove, idx);
-              remove = __find_next(intersect, remove);
-            }
           }
         }
       }
@@ -272,10 +301,8 @@ bool LogicalSolver<H,W,N>::HiddenNuple(UINT nuple) {
   for (const AllCells& group : this->_groups) {
     // Find all unsets (ie still to solve) in group
     std::vector<UINT> valids, combination, complement;
-    UINT g_idx = __find_first<N>(group);
-    while (g_idx < N) {
+    FORBITSIN(g_idx, group) {
       if (_solve_state.second[g_idx]) valids.emplace_back(g_idx);
-      g_idx = __find_next<N>(group, g_idx);
     }
     
     // Iterate over all nuple length combinations of valids
@@ -294,11 +321,8 @@ bool LogicalSolver<H,W,N>::HiddenNuple(UINT nuple) {
         for (UINT idx : combination) {
           Values intersect = _AT(_solve_state.first, idx) & (~unique);
           if (intersect.none()) continue;
-          UINT remove = __find_first(intersect);
-          while (remove < intersect.size()) {
+          FORBITSIN(remove, intersect)
             _actions.emplace_back(Action::REMOVE, remove, idx);
-            remove = __find_next(intersect, remove);
-          }
         }
       }
       complement.clear();
@@ -336,52 +360,37 @@ bool LogicalSolver<H,W,N>::GroupIntersection() {
 //    if(b_cells.count() < 2) continue;
     // Values in the intersect region
     Values i_vals(0);
-    UINT i_idx = __find_first(int_cells);
-    while (i_idx < int_cells.size()) {
+    FORBITSIN(i_idx, int_cells)
       i_vals |= _AT(_solve_state.first, i_idx);
-      i_idx = __find_next(int_cells, i_idx);
-    }
+
     // Values in group A excluding intersect region
     Values a_vals(0);
-    UINT a_idx = __find_first(a_cells);
-    while (a_idx < a_cells.size()) {
+    FORBITSIN(a_idx, a_cells)
       a_vals |= _AT(_solve_state.first, a_idx);
-      a_idx = __find_next(a_cells, a_idx);
-    }
+    
     // Values in group B excluding intersect region
     Values b_vals(0);
-    UINT b_idx = __find_first(b_cells);
-    while (b_idx < b_cells.size()) {
+    FORBITSIN(b_idx, b_cells)
       b_vals |= _AT(_solve_state.first, b_idx);
-      b_idx = __find_next(b_cells, b_idx);
-    }
     
     Values i_not_a = i_vals & ~a_vals;
     Values i_not_b = i_vals & ~b_vals;
     
     // Remove i_not_a from b_cells
-    UINT rval_b = __find_first(i_not_a);
-    while (rval_b < i_not_a.size()) {
-      UINT ridx_b = __find_first(b_cells);
-      while (ridx_b < b_cells.size()) {
+    FORBITSIN(rval_b, i_not_a) {
+      FORBITSIN(ridx_b, b_cells) {
         if (_solve_state.first[ridx_b][rval_b])
           _actions.emplace_back(Action::REMOVE, rval_b, ridx_b);
-        ridx_b = __find_next(b_cells, ridx_b);
       }
-      rval_b = __find_next(i_not_a, rval_b);
     }
     
     
     // Remove i_not_b from a_cells
-    UINT rval_a = __find_first(i_not_b);
-    while (rval_a < i_not_b.size()) {
-      UINT ridx_a = __find_first(a_cells);
-      while (ridx_a < a_cells.size()) {
+    FORBITSIN(rval_a, i_not_b) {
+      FORBITSIN(ridx_a, a_cells) {
         if (_solve_state.first[ridx_a][rval_a])
           _actions.emplace_back(Action::REMOVE, rval_a, ridx_a);
-        ridx_a = __find_next(a_cells, ridx_a);
       }
-      rval_a = __find_next(i_not_b, rval_a);
     }
   
   }
@@ -395,11 +404,9 @@ bool LogicalSolver<H,W,N>::GroupIntersection() {
 template <UINT H, UINT W, UINT N>
 void LogicalSolver<H,W,N>::SetSingleValue(UINT val, UINT idx) {
   // Adds actions to remove val from all cells affected by idx
-  UINT affect = __find_first<N>(_AT(this->_affected, idx));
-  while (affect < N) {
+  FORBITSIN(affect, _AT(this->_affected, idx)) {
     if (_solve_state.first[affect][val])
       _actions.emplace_back(Action::REMOVE, val, affect);
-    affect = __find_next<N>(_AT(this->_affected, idx), affect);
   }
   // Complete the cell
   _actions.emplace_back(Action::COMPLETE, idx, idx);
