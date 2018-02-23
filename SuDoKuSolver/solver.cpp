@@ -26,18 +26,21 @@ _groups(grid.GetAllGroups()), _affected(grid.GetAllAffected())
 template <UINT H, UINT W, UINT N>
 bool BruteForceSolver<H,W,N>::Solve() {
   // Pair of state and what cells need to be solved in that state
-  typedef std::pair<GridState, AllCells> SolveState;
+  typedef std_x::triple<GridState, AllCells, UINT> SolveState;
+  UINT iters = 0;
+  _count = 0;
+  _max = 2;
+  _score = 0;
   
   std::vector<SolveState> to_run;
   AllCells to_solve(0);
   for (UINT i = 0; i < N; ++i) {
-    if (!this->_grid.GetCell(i).IsFixed()) to_solve.set(i);
+    if (!this->_grid.GetCell(i).IsFixed()) {
+      to_solve.set(i);
+      ++_score;
+    }
   }
-  to_run.emplace_back(this->_initial, to_solve);
-  
-  UINT iters = 0;
-  _count = 0;
-  _max = 2;
+  to_run.emplace_back(this->_initial, to_solve, 0);
   
   while (to_run.size()) {
     SolveState s = to_run.back();
@@ -64,6 +67,7 @@ bool BruteForceSolver<H,W,N>::Solve() {
     if (best_cell == s.second.size()) {
       ++_count;
       this->_solved = s.first;
+      _score += 100 * s.third;
       if (_count == _max) break;  // bail out
       continue;
     }
@@ -99,6 +103,8 @@ bool BruteForceSolver<H,W,N>::Solve() {
       FORBITSIN(val, _AT(s.first, best_cell)) {
         GridState newState;
         AllCells new_tosolve(s.second);
+        UINT branch = s.third;
+        if (cell_count > 1) ++branch;
         new_tosolve.reset(best_cell);
         std::copy(s.first.begin(), s.first.end(), newState.begin());
         _AT(newState, best_cell).reset();
@@ -108,7 +114,7 @@ bool BruteForceSolver<H,W,N>::Solve() {
         FORBITSIN(a_pos, a) {
           if (new_tosolve[a_pos]) _AT(newState, a_pos).reset(val);
         }
-        to_run.emplace_back(newState, new_tosolve);
+        to_run.emplace_back(newState, new_tosolve, branch);
       }
     } else {
       // Branch on group_val in all posible places in group
@@ -117,6 +123,8 @@ bool BruteForceSolver<H,W,N>::Solve() {
         if (!_AT(s.first, cell)[group_val]) continue;
         GridState newState;
         AllCells new_tosolve(s.second);
+        UINT branch = s.third;
+        if (group_count > 1) ++branch;
         new_tosolve.reset(cell);
         std::copy(s.first.begin(), s.first.end(), newState.begin());
         _AT(newState, cell).reset();
@@ -126,7 +134,7 @@ bool BruteForceSolver<H,W,N>::Solve() {
         FORBITSIN(a_pos, a) {
           if (new_tosolve[a_pos]) _AT(newState, a_pos).reset(group_val);
         }
-        to_run.emplace_back(newState, new_tosolve);
+        to_run.emplace_back(newState, new_tosolve, branch);
       }
     }
   }

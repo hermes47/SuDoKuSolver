@@ -77,9 +77,10 @@ public:
 public:
   using ISudokuSolver<H,W,N>::ISudokuSolver;
   virtual bool Solve();
+  inline UINT GetScore() { return _score; }
   
 private:
-  UINT _max, _count;
+  UINT _max, _count, _score;
 };
 
 

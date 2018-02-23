@@ -65,6 +65,7 @@ const typename SudokuGrid<H,W,N>::GridState& SudokuGrid<H,W,N>::GetSolvedState()
     if (solver.Solve()) {
      ++count;
       _solved = solver.GetSolvedState();
+      _score = solver.GetScore();
     }
 //    SolveGridNew<H, W, N>(_initial, _grps, _affected, _solved, count, true, 2);
     _num_solutions = (INT)count;
@@ -78,6 +79,12 @@ bool SudokuGrid<H,W,N>::Solve() {
   if (_num_solutions != 1) return false;
   SetState(_solved);
   return true;
+}
+
+template <UINT H, UINT W, UINT N>
+UINT SudokuGrid<H,W,N>::GetScore() {
+  GetSolvedState();
+  return _score;
 }
 
 template <UINT H, UINT W, UINT N>

@@ -49,6 +49,7 @@ public:
   std::array<AllCells, N> _affected;
   GridState _initial, _solved;
   INT _num_solutions = -1;
+  UINT _score;
   
 protected:
   // Default constructor
@@ -76,6 +77,7 @@ public:
   inline virtual const AllCells& GetBlock(UINT i) const { return GetGroup(i+G+G); }
   inline const std::vector<AllCells>& GetAllGroups() const { return _grps; }
   inline const std::array<AllCells, N>& GetAllAffected() const { return _affected; }
+  UINT GetScore();
   
   // Get the set of cells affected by a given cell being set
   inline const AllCells& GetAffected(UINT i) const { return _AT(_affected,i); }
