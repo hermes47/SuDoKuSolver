@@ -55,5 +55,6 @@ inline std_x::triple<UINT, UINT, UINT> GetCellGroups(UINT i) {
   return std_x::make_triple(i / (H * W), c, R * H + C);
 }
 
+#define FORBITSIN(i,val) for (UINT i = __find_first(val); i < val.size(); i = __find_next(val,i))
 
 #endif /* SUDOKUSOLVER_UTILITY_HPP */
