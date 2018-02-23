@@ -45,6 +45,9 @@ namespace std_x {
     triple(triple&& __t)
     : first(std::move(__t.first)), second(std::move(__t.second)), third(std::move(__t.third)) {}
     
+    // Default copy constructor
+    triple(const triple&) = default;
+    
     // Copy constructor
     template<class _U1, class _U2, class _U3>
     triple(const triple<_U1, _U2, _U3>& __t)
@@ -55,6 +58,12 @@ namespace std_x {
     triple(triple<_U1, _U2, _U3>&& __t)
     : first(std::move(__t.first)), second(std::move(__t.second)), third(std::move(__t.third)) {}
     
+    // Constructor for handling emplace's properly?
+    template<class _U1, class _Arg0, class _Arg1, class... _Args>
+    triple(_U1&& __x, _Arg0&& __arg0, _Arg1&& __arg1, _Args&&... __args)
+    : first(std::forward<_U1>(__x)), second(std::forward<_Arg0>(__arg0)),
+    third(std::forward<_Arg1>(__arg1), std::forward<_Args>(__args)...) { }
+    
     // Assignment operator
     triple& operator=(triple&& __t) {
       first = std::move(__t.first);
@@ -64,7 +73,7 @@ namespace std_x {
     }
     
     template<class _U1, class _U2, class _U3>
-    triple* operator=(triple<_U1, _U2, _U3>&& __t) {
+    triple& operator=(triple<_U1, _U2, _U3>&& __t) {
       first = std::move(__t.first);
       second = std::move(__t.second);
       third = std::move(__t.third);
