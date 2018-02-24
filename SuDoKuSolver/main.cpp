@@ -40,14 +40,14 @@ int main(int argc, const char * argv[]) {
   infile.close();
 //  log->info("{} grids loaded from file.", grids_3x3.size());
   
-  //  grids_3x3.clear();
-  //  grids_3x3.push_back("...921..3..9....6.......5...8.4.3..6..7...8..5..7...4...3.......2....7..8..195...");
+//    grids_3x3.clear();
+//    grids_3x3.push_back("142895763..62.3.1...361...28671293..3514..82992453867167.3.129.23.9..1.7419782536");
   typedef std::chrono::high_resolution_clock::time_point Time;
   typedef std::chrono::high_resolution_clock::duration Duration;
   
   std::set<std_x::triple<Duration, std::string, UINT>> uniques;
 //  UINT valids = 0;
-  std::array<UINT, 14> counts;
+  std::array<UINT, 15> counts;
   for (UINT& i : counts) i = 0;
   
   for (std::string& g : grids_3x3) {
@@ -59,58 +59,6 @@ int main(int argc, const char * argv[]) {
     Time end = std::chrono::high_resolution_clock::now();
     uniques.emplace(end - start, g, s);
     auto ops = solver.LogicalOperations();
-/*    if (!G2.IsSolvable()) {
-      std::cout << G2 << std::endl;
-      continue;
-    }
-    std::cout << G2 << std::endl;
-    LogicalSolver<3> solver(G2);
-    solver.Solve();
-    auto ops = solver.LogicalOperations();
-    if (*std::max_element(ops.begin(), ops.end()) == LogicOperation::BRUTE_FORCE) continue;
-    switch (*std::max_element(ops.begin(), ops.end())) {
-      case LogicOperation::NAKED_SINGLE:
-        uniques.emplace(end - start, g, "NAKED SINGLE");
-        break;
-      case LogicOperation::HIDDEN_SINGLE:
-        uniques.emplace(end - start, g, "HIDDEN SINGLE");
-        break;
-      case LogicOperation::NAKED_PAIR:
-        uniques.emplace(end - start, g, "NAKED PAIR");
-        break;
-      case LogicOperation::HIDDEN_PAIR:
-        uniques.emplace(end - start, g, "HIDDEN PAIR");
-        break;
-      case LogicOperation::NAKED_TRIPLE:
-        uniques.emplace(end - start, g, "NAKED TRIPLE");
-        break;
-      case LogicOperation::HIDDEN_TRIPLE:
-        uniques.emplace(end - start, g, "HIDDEN TRIPLE");
-        break;
-      case LogicOperation::NAKED_QUAD:
-        uniques.emplace(end - start, g, "NAKED QUAD");
-        break;
-      case LogicOperation::HIDDEN_QUAD:
-        uniques.emplace(end - start, g, "HIDDEN QUAD");
-        break;
-      case LogicOperation::NAKED_NUPLE:
-        uniques.emplace(end - start, g, "NAKED NUPLE");
-        break;
-      case LogicOperation::HIDDEN_NUPLE:
-        uniques.emplace(end - start, g, "HIDDEN NUPLE");
-        break;
-      case LogicOperation::INTERSECTION_REMOVAL:
-        uniques.emplace(end - start, g, "INTERSECTION REMOVAL");
-        break;
-      case LogicOperation::BRUTE_FORCE:
-        uniques.emplace(end - start, g, "");
-        break;
-      default:
-        break;
-    }
-    
-    //    if (valids == 1) break;
- */
     switch (*std::max_element(ops.begin(), ops.end())) {
       case LogicOperation::NAKED_SINGLE:
         ++counts[0];
@@ -145,17 +93,20 @@ int main(int argc, const char * argv[]) {
       case LogicOperation::INTERSECTION_REMOVAL:
         ++counts[10];
         break;
-      case LogicOperation::PATTERN_OVERLAY:
+      case LogicOperation::BUG_REMOVAL:
         ++counts[11];
         break;
-      case LogicOperation::BRUTE_FORCE:
+      case LogicOperation::PATTERN_OVERLAY:
         ++counts[12];
-        if (solver.LogicalOperations().size() == 1) ++counts[13];
+        break;
+      case LogicOperation::BRUTE_FORCE:
+        ++counts[13];
+        if (solver.LogicalOperations().size() == 1) ++counts[14];
         break;
       default:
         break;
     }
-    if (uniques.size() == 10000) break;
+//    if (uniques.size() == 1000) break;
   }
   UINT max_Score = 0, min_score = 20000;
   uint64_t runtime = 0;
@@ -170,28 +121,33 @@ int main(int argc, const char * argv[]) {
     if (s.third > max_Score) max_Score = s.third;
     if (s.third < min_score) min_score = s.third;
   }
+  outfile << "# Total time: " << std::setfill('0') << std::setw(3)
+  << (runtime % 1000000000) / 1000000 << "::" << std::setw(3)
+  << (runtime % 1000000) / 1000 << "::" << std::setw(3)
+  << runtime % 1000 << std::endl;
   std::cout << "# Total time: " << std::setfill('0') << std::setw(3)
   << (runtime % 1000000000) / 1000000 << "::" << std::setw(3)
   << (runtime % 1000000) / 1000 << "::" << std::setw(3)
   << runtime % 1000 << std::endl;
   outfile.close();
   
-//  std::cout << "Minimum score: " << min_score << std::endl;
-//  std::cout << "Maximum score: " << max_Score << std::endl;
-//  std::cout << "Naked singles: " << counts[0] << std::endl;
-//  std::cout << "Hidden singles: " << counts[1] << std::endl;
-//  std::cout << "Naked pairs: " << counts[2] << std::endl;
-//  std::cout << "Hidden pairs: " << counts[3] << std::endl;
-//  std::cout << "Naked triples: " << counts[4] << std::endl;
-//  std::cout << "Hidden triples: " << counts[5] << std::endl;
-//  std::cout << "Naked quads: " << counts[6] << std::endl;
-//  std::cout << "Hidden quads: " << counts[7] << std::endl;
-//  std::cout << "Naked nuples: " << counts[8] << std::endl;
-//  std::cout << "Hidden nuples: " << counts[9] << std::endl;
-//  std::cout << "Intersection removal: " << counts[10] << std::endl;
-//  std::cout << "Pattern overlay: " << counts[11] << std::endl;
-//  std::cout << "Brute force: " << counts[12] << std::endl;
-//  std::cout << "Brute force only: " << counts[13] << std::endl;
+  std::cout << "Minimum score: " << min_score << std::endl;
+  std::cout << "Maximum score: " << max_Score << std::endl;
+  std::cout << "Naked singles: " << counts[0] << std::endl;
+  std::cout << "Hidden singles: " << counts[1] << std::endl;
+  std::cout << "Naked pairs: " << counts[2] << std::endl;
+  std::cout << "Hidden pairs: " << counts[3] << std::endl;
+  std::cout << "Naked triples: " << counts[4] << std::endl;
+  std::cout << "Hidden triples: " << counts[5] << std::endl;
+  std::cout << "Naked quads: " << counts[6] << std::endl;
+  std::cout << "Hidden quads: " << counts[7] << std::endl;
+  std::cout << "Naked nuples: " << counts[8] << std::endl;
+  std::cout << "Hidden nuples: " << counts[9] << std::endl;
+  std::cout << "Intersection removal: " << counts[10] << std::endl;
+  std::cout << "BUG removal: " << counts[11] << std::endl;
+  std::cout << "Pattern overlay: " << counts[12] << std::endl;
+  std::cout << "Brute force: " << counts[13] << std::endl;
+  std::cout << "Brute force only: " << counts[14] << std::endl;
   
   return 0;
 }

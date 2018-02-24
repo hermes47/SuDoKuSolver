@@ -160,8 +160,6 @@ LogicalSolver<H,W,N>::LogicalSolver(SudokuGrid<H,W,N>& grid)
       _intersects.emplace_back(intersect, i, j);
     }
   }
-  
-  // Build the table of possible patterns
 }
 
 template <UINT H, UINT W, UINT N>
@@ -199,6 +197,7 @@ bool LogicalSolver<H,W,N>::Solve() {
     if (success) continue;
 
     if (GroupIntersection()) continue;
+    if (BugRemoval()) continue;
     if (PatternOverlay()) continue;
     
     // Logic exhausted, so run brute force and exit if that fails
@@ -422,41 +421,49 @@ bool LogicalSolver<H,W,N>::GroupIntersection() {
 template <UINT H, UINT W, UINT N>
 bool LogicalSolver<H,W,N>::PatternOverlay() {
   std::array<AllCells, G> val_masks;
-  std::array<std::list<AllCells>, G> patterns;
   for (UINT val = 0; val < G; ++val) {
     // Determine all cells that can contain val
-    _AT(val_masks, val) = AllCells(0);
+    AllCells mask(0);
     for (UINT cell = 0; cell < _solve_state.first.size(); ++cell) {
-      if (_AT(_solve_state.first, cell)[val]) _AT(val_masks, val).set(cell);
+      if (_AT(_solve_state.first, cell)[val]) mask.set(cell);
     }
+    _AT(val_masks, val) = mask;
     
-    // Generate all valid masks for val
-    std::vector<std::pair<AllCells,UINT>> partials;
-    partials.emplace_back(_AT(val_masks, val), 0);
-    while (partials.size()) {
-      std::pair<AllCells, UINT> current = partials.back();
-      partials.pop_back();
-      
-      if (current.second == G) {
-        _AT(patterns, val).emplace_back(current.first);
-        continue;
+    // build the patterns the first time.
+    if (_AT(_patterns, val).size() == 0) {
+      // Generate all valid masks for val
+      std::vector<std::pair<AllCells,UINT>> partials;
+      partials.emplace_back(mask, 0);
+      while (partials.size()) {
+        std::pair<AllCells, UINT> current = partials.back();
+        partials.pop_back();
+        
+        if (current.second == G) {
+          _AT(_patterns, val).emplace_back(current.first);
+          continue;
+        }
+        
+        AllCells possibles = current.first & _AT(this->_groups, current.second);
+        if (possibles.none()) continue;
+        
+        FORBITSIN(pos, possibles) {
+          AllCells new_partial(current.first);
+          FORBITSIN(remove, _AT(this->_affected, pos)) new_partial.reset(remove);
+          partials.emplace_back(new_partial, current.second + 1);
+        }
       }
-      
-      AllCells possibles = current.first & _AT(this->_groups, current.second);
-      if (possibles.none()) continue;
-      
-      FORBITSIN(pos, possibles) {
-        AllCells new_partial(current.first);
-        FORBITSIN(remove, _AT(this->_affected, pos)) new_partial.reset(remove);
-        partials.emplace_back(new_partial, current.second + 1);
-      }
+    } else if (_AT(_patterns, val).size() != 1){
+      // Filter existing masks if they no longer match
+      _AT(_patterns, val).remove_if([&mask](AllCells& pattern){
+        return (pattern & mask).count() != G;
+      });
     }
   }
   
   // RULE 1: if no patterns use a particular cell, can remove val from that cell
   for (UINT val = 0; val < G; ++val) {
     AllCells used(0);
-    for (AllCells& pattern : _AT(patterns, val)) used |= pattern;
+    for (AllCells& pattern : _AT(_patterns, val)) used |= pattern;
     AllCells not_used = _AT(val_masks, val) & ~used;
     if (not_used.none()) continue;
     FORBITSIN(cell, not_used) _actions.emplace_back(Action::REMOVE, val, cell);
@@ -482,7 +489,7 @@ bool LogicalSolver<H,W,N>::PatternOverlay() {
       if (current.second == G) {
         bool all_coverage = true;
         //        if (current.first.count() != 2) continue;
-        for (AllCells& pattern : _AT(patterns, val)) {
+        for (AllCells& pattern : _AT(_patterns, val)) {
           if ((pattern & current.first).none()) {
             all_coverage = false;
             break;
@@ -505,7 +512,7 @@ bool LogicalSolver<H,W,N>::PatternOverlay() {
     for (UINT pattern_idx = 0; pattern_idx < G; ++pattern_idx) {
       if (coverage_idx == pattern_idx) continue;
       for (AllCells& cover : _AT(coverage, coverage_idx)) {
-        _AT(patterns, pattern_idx).remove_if([&cover](AllCells& pattern){
+        _AT(_patterns, pattern_idx).remove_if([&cover](AllCells& pattern){
           return (pattern & cover).count() == cover.count();
         });
       }
@@ -514,13 +521,44 @@ bool LogicalSolver<H,W,N>::PatternOverlay() {
   // Look again at rule 1 with filtered patterns
   for (UINT val = 0; val < G; ++val) {
     AllCells used(0);
-    for (AllCells& pattern : _AT(patterns, val)) used |= pattern;
+    for (AllCells& pattern : _AT(_patterns, val)) used |= pattern;
     AllCells not_used = _AT(val_masks, val) & ~used;
     if (not_used.none()) continue;
     FORBITSIN(cell, not_used) _actions.emplace_back(Action::REMOVE, val, cell);
   }
   if (_actions.size() > _action_next) {
     _order.push_back(LogicOperation::PATTERN_OVERLAY);
+    return true;
+  }
+  return false;
+}
+
+template <UINT H, UINT W, UINT N>
+bool LogicalSolver<H,W,N>::BugRemoval() {
+  bool seen_three = false;
+  UINT three_idx = 0;
+  Values odds(0);
+//  odds.set();
+  
+  FORBITSIN(idx, _solve_state.second) {
+    UINT count = _AT(_solve_state.first, idx).count();
+    if (count == 2) {
+      FORBITSIN(val, _AT(_solve_state.first, idx)) odds.flip(val);
+    } else if (count == 3 && !seen_three) {
+      FORBITSIN(val, _AT(_solve_state.first, idx)) odds.flip(val);
+      seen_three = true;
+      three_idx = idx;
+    }
+    else return false;
+  }
+  if (!seen_three) return false;
+  
+  FORBITSIN(idx, _AT(_solve_state.first, three_idx)) {
+    if (!odds[idx]) _actions.emplace_back(Action::REMOVE, idx, three_idx);
+  }
+  
+  if (_actions.size() > _action_next) {
+    _order.push_back(LogicOperation::BUG_REMOVAL);
     return true;
   }
   return false;

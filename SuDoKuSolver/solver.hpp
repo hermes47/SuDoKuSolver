@@ -31,6 +31,7 @@ enum class LogicOperation {
   NAKED_NUPLE,        // For larger grids
   HIDDEN_NUPLE,
   INTERSECTION_REMOVAL,
+  BUG_REMOVAL,
   PATTERN_OVERLAY,
   BRUTE_FORCE,         // Last resort
   NUM_OPERATIONS
@@ -123,6 +124,7 @@ private:
   bool NakedNuple(UINT);
   bool HiddenNuple(UINT);
   bool GroupIntersection();
+  bool BugRemoval();
   bool PatternOverlay();
   bool BruteForce();
   
