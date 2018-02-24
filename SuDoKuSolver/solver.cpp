@@ -9,7 +9,10 @@
 #include "defines.hpp"
 #include <iostream>
 #include <list>
+#include <sstream>
 #include <vector>
+
+#include "spdlog/spdlog.h"
 
 #include "combinations.hpp"
 #include "grid.hpp"
@@ -21,7 +24,9 @@ template <UINT H, UINT W, UINT N>
 ISudokuSolver<H,W,N>::ISudokuSolver(SudokuGrid<H,W,N>& grid)
 : _grid(grid), _initial(grid.GetInitialState()), _solved(grid.GetInitialState()),
 _groups(grid.GetAllGroups()), _affected(grid.GetAllAffected())
-{ }
+{
+  _log = spdlog::get("logger");
+}
 
 // BruteForce Solver implementation
 template <UINT H, UINT W, UINT N>
@@ -147,6 +152,7 @@ template <UINT H, UINT W, UINT N>
 LogicalSolver<H,W,N>::LogicalSolver(SudokuGrid<H,W,N>& grid)
 : ISudokuSolver<H, W, N>(grid)
 {
+  // Build the table of intersects
   for (UINT i = 0; i < this->_groups.size(); ++i) {
     for (UINT j = this->_groups.size() - 1; j > i; --j) {
       AllCells intersect = _AT(this->_groups, i) & _AT(this->_groups, j);
@@ -154,6 +160,8 @@ LogicalSolver<H,W,N>::LogicalSolver(SudokuGrid<H,W,N>& grid)
       _intersects.emplace_back(intersect, i, j);
     }
   }
+  
+  // Build the table of possible patterns
 }
 
 template <UINT H, UINT W, UINT N>
@@ -176,7 +184,7 @@ bool LogicalSolver<H,W,N>::Solve() {
     // Search for singles
     if (NakedSingle()) continue;
     if (HiddenSingle()) continue;
-    
+
     // Search for naked and hidden n-nuples where n <= G / 2
     bool success = false;
     for (UINT nuple = 2; nuple <= this->G / 2; ++nuple) {
@@ -189,7 +197,7 @@ bool LogicalSolver<H,W,N>::Solve() {
       if (success) break;
     }
     if (success) continue;
-    
+
     if (GroupIntersection()) continue;
     if (PatternOverlay()) continue;
     
@@ -521,12 +529,33 @@ bool LogicalSolver<H,W,N>::PatternOverlay() {
 template <UINT H, UINT W, UINT N>
 void LogicalSolver<H,W,N>::SetSingleValue(UINT val, UINT idx) {
   // Adds actions to remove val from all cells affected by idx
+#ifdef DEBUG
+  std::stringstream ss;
+  bool done_first = false;
+#endif
   FORBITSIN(affect, _AT(this->_affected, idx)) {
-    if (_solve_state.first[affect][val])
+    if (_solve_state.first[affect][val]) {
       _actions.emplace_back(Action::REMOVE, val, affect);
+#ifdef DEBUG
+      auto rcb = GetCellGroups<H,W,N>(affect);
+      if (!done_first) {
+        ss << "r" << rcb.first+1 << "c" << rcb.second+1;
+        done_first = true;
+      } else ss << ", r" << rcb.first+1 << "c" << rcb.second+1;
+#endif
+    }
   }
   // Complete the cell
   _actions.emplace_back(Action::COMPLETE, idx, idx);
+#ifdef DEBUG
+  auto rcb = GetCellGroups<H,W,N>(idx);
+  if (ss.str().size())
+    this->_log->debug("[NAKED SINGLE] R{}C{} can only be {}. Removes {} from {}.",
+                      rcb.first+1, rcb.second+1, val+1, val+1, ss.str());
+  else
+    this->_log->debug("[NAKED SINGLE] R{}C{} can only be {}. No removals made.",
+                      rcb.first+1, rcb.second+1, val+1);
+#endif
 }
 
 // explicit init

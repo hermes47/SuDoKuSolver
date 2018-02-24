@@ -12,7 +12,10 @@
 #include "defines.hpp"
 
 #include <array>
+#include <list>
 #include <vector>
+
+#include "spdlog/spdlog.h"
 
 #include "utility.hpp"
 
@@ -57,6 +60,7 @@ protected:
   const std::vector<AllCells> _groups;
   const std::array<AllCells, N> _affected;
   bool _quiet;
+  std::shared_ptr<spdlog::logger> _log;
   
 private:
   ISudokuSolver() = default;
@@ -69,11 +73,11 @@ public:
 
 template <UINT H, UINT W = H, UINT N = H * H * W * W>
 class BruteForceSolver : public ISudokuSolver<H,W,N> {
-//  static const INT G = H * W;
+  static const INT G = H * W;
 public:
-  typedef std::bitset<H * W> Values;
+  typedef std::bitset<G> Values;
   typedef std::bitset<N> AllCells;
-  typedef std::array<std::bitset<H * W>, N> GridState;
+  typedef std::array<std::bitset<G>, N> GridState;
   
 public:
   using ISudokuSolver<H,W,N>::ISudokuSolver;
@@ -96,6 +100,7 @@ public:
   typedef std_x::triple<Action, UINT, UINT> Actionable;
   typedef std::pair<GridState, AllCells> SolveState;
   typedef std_x::triple<const AllCells, UINT, UINT> Intersection;
+  typedef std::list<AllCells> Patterns;
   
 public:
   LogicalSolver(SudokuGrid<H,W,N>&);
@@ -107,6 +112,7 @@ private:
   std::vector<LogicOperation> _order;
   std::vector<Actionable> _actions;
   std::vector<Intersection> _intersects;
+  std::array<Patterns, G> _patterns;
   UINT _action_next;
   
 private:
