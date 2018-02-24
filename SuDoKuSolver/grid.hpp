@@ -12,7 +12,11 @@
 #include "defines.hpp"
 
 #include <array>
+#ifdef USE_EASTL_BITSET
+#include "EASTL/bitset.h"
+#else
 #include <bitset>
+#endif
 #include <cassert>
 #include <string>
 #include <vector>
@@ -38,8 +42,8 @@ class SudokuGrid {
   
 public:
   typedef SudokuCell<G> Cell;
-  typedef std::bitset<G> Values;
-  typedef std::bitset<N> AllCells;
+  typedef BITSET(G) Values;
+  typedef BITSET(N) AllCells;
   typedef std::array<Values, N> GridState;  // should be const Values?
   
 public:

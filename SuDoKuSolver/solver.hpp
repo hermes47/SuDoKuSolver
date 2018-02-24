@@ -49,9 +49,9 @@ class ISudokuSolver {
 protected:
   static const UINT G = H * W;
 public:
-  typedef std::bitset<H * W> Values;
-  typedef std::bitset<N> AllCells;
-  typedef std::array<std::bitset<G>, N> GridState;
+  typedef BITSET(G) Values;
+  typedef BITSET(N) AllCells;
+  typedef std::array<Values, N> GridState;
   
 protected:
   SudokuGrid<H,W,N>& _grid;
@@ -75,9 +75,9 @@ template <UINT H, UINT W = H, UINT N = H * H * W * W>
 class BruteForceSolver : public ISudokuSolver<H,W,N> {
   static const INT G = H * W;
 public:
-  typedef std::bitset<G> Values;
-  typedef std::bitset<N> AllCells;
-  typedef std::array<std::bitset<G>, N> GridState;
+  typedef BITSET(G) Values;
+  typedef BITSET(N) AllCells;
+  typedef std::array<Values, N> GridState;
   
 public:
   using ISudokuSolver<H,W,N>::ISudokuSolver;
@@ -93,9 +93,9 @@ template <UINT H, UINT W = H, UINT N = H * H * W * W>
 class LogicalSolver : public ISudokuSolver<H,W,N> {
     static const UINT G = H * W;
 public:
-  typedef std::bitset<G> Values;
-  typedef std::bitset<N> AllCells;
-  typedef std::array<std::bitset<G>, N> GridState;
+  typedef BITSET(G) Values;
+  typedef BITSET(N) AllCells;
+  typedef std::array<Values, N> GridState;
   // Value to reset, Index to perform on, Action group
   typedef std_x::triple<Action, UINT, UINT> Actionable;
   typedef std::pair<GridState, AllCells> SolveState;

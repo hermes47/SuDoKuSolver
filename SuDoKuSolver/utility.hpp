@@ -11,7 +11,11 @@
 
 #include "defines.hpp"
 
+#ifdef USE_EASTL_BITSET
+#include "EASTL/bitset.h"
+#else
 #include <bitset>
+#endif
 
 #include "triple.hpp"
 
@@ -28,20 +32,28 @@
 // Functions to find set bits within a bitset
 //  GCC has methods to do
 template <UINT N>
-inline UINT __find_first(const std::bitset<N>& bs) {
+inline UINT __find_first(const BITSET(N)& bs) {
+#ifndef USE_EASTL_BITSET
   // finds index of first set bit. Returns N if no bits set.
   if (bs.none()) return N;
   UINT idx = 0;
   while (!bs[idx]) ++idx;
   return idx;
+#else
+  return bs.find_first();
+#endif
 }
 
 template <UINT N>
-inline UINT __find_next(const std::bitset<N>& bs, const UINT pos) {
+inline UINT __find_next(const BITSET(N)& bs, const UINT pos) {
+#ifndef USE_EASTL_BITSET
   // finds index of next set bit from pos. Returns N if no bits set.
   UINT idx = pos + 1;
   while (idx < N && !bs[idx]) ++idx;
   return idx;
+#else
+  return bs.find_next(pos);
+#endif
 }
 
 // Function to determine the row, column and block of a given index

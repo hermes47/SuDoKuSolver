@@ -11,14 +11,18 @@
 
 #include "defines.hpp"
 
+#ifdef USE_EASTL_BITSET
+#include "EASTL/bitset.h"
+#else
 #include <bitset>
+#endif
 #include <utility>
 
 #include "utility.hpp"
 
 template <UINT N>
 class SudokuCell {
-  typedef std::bitset<N> Values;
+  typedef BITSET(N) Values;
   
   Values _values, _initial;
   UINT _row, _col, _blk, _idx;

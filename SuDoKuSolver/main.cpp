@@ -38,7 +38,7 @@ int main(int argc, const char * argv[]) {
     grids_3x3.emplace_back(grid.substr(0,81));
   }
   infile.close();
-  log->info("{} grids loaded from file.", grids_3x3.size());
+//  log->info("{} grids loaded from file.", grids_3x3.size());
   
   //  grids_3x3.clear();
   //  grids_3x3.push_back("...921..3..9....6.......5...8.4.3..6..7...8..5..7...4...3.......2....7..8..195...");
@@ -51,10 +51,10 @@ int main(int argc, const char * argv[]) {
   for (UINT& i : counts) i = 0;
   
   for (std::string& g : grids_3x3) {
+    Time start = std::chrono::high_resolution_clock::now();
     SudokuGrid<3> G2(g);
     LogicalSolver<3> solver(G2);
     solver.Solve();
-    Time start = std::chrono::high_resolution_clock::now();
     UINT s = G2.GetScore();
     Time end = std::chrono::high_resolution_clock::now();
     uniques.emplace(end - start, g, s);
@@ -155,7 +155,7 @@ int main(int argc, const char * argv[]) {
       default:
         break;
     }
-    if (uniques.size() == 1) break;
+    if (uniques.size() == 10000) break;
   }
   UINT max_Score = 0, min_score = 20000;
   uint64_t runtime = 0;
@@ -170,28 +170,28 @@ int main(int argc, const char * argv[]) {
     if (s.third > max_Score) max_Score = s.third;
     if (s.third < min_score) min_score = s.third;
   }
-  outfile << "# Total time: " << std::setfill('0') << std::setw(3)
+  std::cout << "# Total time: " << std::setfill('0') << std::setw(3)
   << (runtime % 1000000000) / 1000000 << "::" << std::setw(3)
   << (runtime % 1000000) / 1000 << "::" << std::setw(3)
   << runtime % 1000 << std::endl;
   outfile.close();
   
-  std::cout << "Minimum score: " << min_score << std::endl;
-  std::cout << "Maximum score: " << max_Score << std::endl;
-  std::cout << "Naked singles: " << counts[0] << std::endl;
-  std::cout << "Hidden singles: " << counts[1] << std::endl;
-  std::cout << "Naked pairs: " << counts[2] << std::endl;
-  std::cout << "Hidden pairs: " << counts[3] << std::endl;
-  std::cout << "Naked triples: " << counts[4] << std::endl;
-  std::cout << "Hidden triples: " << counts[5] << std::endl;
-  std::cout << "Naked quads: " << counts[6] << std::endl;
-  std::cout << "Hidden quads: " << counts[7] << std::endl;
-  std::cout << "Naked nuples: " << counts[8] << std::endl;
-  std::cout << "Hidden nuples: " << counts[9] << std::endl;
-  std::cout << "Intersection removal: " << counts[10] << std::endl;
-  std::cout << "Pattern overlay: " << counts[11] << std::endl;
-  std::cout << "Brute force: " << counts[12] << std::endl;
-  std::cout << "Brute force only: " << counts[13] << std::endl;
+//  std::cout << "Minimum score: " << min_score << std::endl;
+//  std::cout << "Maximum score: " << max_Score << std::endl;
+//  std::cout << "Naked singles: " << counts[0] << std::endl;
+//  std::cout << "Hidden singles: " << counts[1] << std::endl;
+//  std::cout << "Naked pairs: " << counts[2] << std::endl;
+//  std::cout << "Hidden pairs: " << counts[3] << std::endl;
+//  std::cout << "Naked triples: " << counts[4] << std::endl;
+//  std::cout << "Hidden triples: " << counts[5] << std::endl;
+//  std::cout << "Naked quads: " << counts[6] << std::endl;
+//  std::cout << "Hidden quads: " << counts[7] << std::endl;
+//  std::cout << "Naked nuples: " << counts[8] << std::endl;
+//  std::cout << "Hidden nuples: " << counts[9] << std::endl;
+//  std::cout << "Intersection removal: " << counts[10] << std::endl;
+//  std::cout << "Pattern overlay: " << counts[11] << std::endl;
+//  std::cout << "Brute force: " << counts[12] << std::endl;
+//  std::cout << "Brute force only: " << counts[13] << std::endl;
   
   return 0;
 }

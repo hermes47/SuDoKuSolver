@@ -18,4 +18,11 @@ x.at(i)
 x[i]
 #endif
 
+// Picking the right bitset type to use
+#ifdef USE_EASTL_BITSET
+#define BITSET(x) eastl::bitset<x>
+#else
+#define BITSET(x) std::bitset<x>
+#endif
+
 #endif /* SUDOKUSOLVER_DEFINES_HPP */
